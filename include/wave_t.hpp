@@ -24,7 +24,7 @@ constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
 constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 
-enum wave_type_t : uint8_t { sine = 1, triangle = 2, square = 4 };
+enum wave_type_t : uint8_t { sine = 1, triangle = 2, square = 4, sawtooth = 8 };
 
 struct wave_header_t {
   uint32_t chunk_id;
@@ -160,13 +160,20 @@ public:
             return static_cast<int16_t>(amplititude * sign(sin(2 * std::numbers::pi * _frequency * time)));
       };
 
+      // Source: https://en.wikipedia.org/wiki/Sawtooth_wave
+      auto pcm_saw_tooth = [](double time, double amplititude, double _frequency) {
+          const double period = (1.0 / _frequency);
+          return static_cast<int16_t>(2.0 * amplititude * ((time / period) - floor(0.5 + (time / period))));
+      };
+
       bool is_stereo = m_header.number_of_channels == 2;
 
       double time = std::numbers::pi;
       for (size_t _ = 0; _ < sample_size; _++) {
         size_t wave_count = static_cast<size_t>((wave_type & wave_type_t::sine) == (wave_type_t::sine)) +
                                 static_cast<size_t>((wave_type & wave_type_t::triangle) == (wave_type_t::triangle)) +
-                                static_cast<size_t>((wave_type & wave_type_t::square) == (wave_type_t::square));
+                                static_cast<size_t>((wave_type & wave_type_t::square) == (wave_type_t::square)) +
+                                static_cast<size_t>((wave_type & wave_type_t::sawtooth) == (wave_type_t::sawtooth));
         const double volume = set_volume(volume_percent / static_cast<double>(wave_count));
         int16_t sample = 0;
         if ((wave_type & wave_type_t::sine)) {
@@ -177,6 +184,9 @@ public:
         }
         if ((wave_type & wave_type_t::square)) {
           sample += pcm_square(time, volume, frequency);
+        }
+        if ((wave_type & wave_type_t::sawtooth)) {
+           sample += pcm_saw_tooth(time, volume, frequency);
         }
         switch (m_header.bits_per_sample) {
         case _8_BITS_PER_SAMPLE:
