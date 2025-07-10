@@ -1,5 +1,7 @@
 # C++ .WAV manipulation header only library
 
+To use this header you can just wget like below or clone repo but you only need to depend on header.
+
 ```
     wget https://raw.githubusercontent.com/zulrah93/wave_t/refs/heads/master/include/wave_t.hpp
 ```
