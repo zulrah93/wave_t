@@ -120,6 +120,10 @@ public:
   bool generate_wave(uint8_t wave_type, size_t sample_size,
                      double frequency, double volume_percent) {
 
+      if (m_header.sample_rate == 0) {
+          return false;
+      }
+
       auto set_volume = [](double percent) {
             if (percent > 1.0) {
               percent = 1.0;
@@ -144,9 +148,8 @@ public:
       };
 
       // Source: https://en.wikipedia.org/wiki/Sine_wave
-      auto pcm_sine = [](double _frequency, double time, double amplititude) {
-        return static_cast<int16_t>(
-            amplititude * sin(2 * std::numbers::pi * _frequency * time));
+      auto pcm_sine = [](double _frequency, double time, double amplititude, double phase) {
+            return static_cast<int16_t>(amplititude * sin((2 * std::numbers::pi * _frequency * time) + phase));
       };
 
       // Source: https://en.wikipedia.org/wiki/Triangle_wave
@@ -167,8 +170,9 @@ public:
       };
 
       bool is_stereo = m_header.number_of_channels == 2;
-
-      double time = std::numbers::pi;
+      const double phase = 0.0;
+      double time = 0.0;
+      size_t sample_count = 0;
       for (size_t _ = 0; _ < sample_size; _++) {
         size_t wave_count = static_cast<size_t>((wave_type & wave_type_t::sine) == (wave_type_t::sine)) +
                                 static_cast<size_t>((wave_type & wave_type_t::triangle) == (wave_type_t::triangle)) +
@@ -177,7 +181,11 @@ public:
         const double volume = set_volume(volume_percent / static_cast<double>(wave_count));
         int16_t sample = 0;
         if ((wave_type & wave_type_t::sine)) {
-          sample += pcm_sine(frequency, time, volume);
+          sample += pcm_sine(frequency, time, volume, phase);
+          if (sample_count >= static_cast<size_t>(static_cast<double>(m_header.sample_rate))) {
+              sample_count = 0;
+          }
+          sample_count++;
         }
         if ((wave_type & wave_type_t::triangle)) {
           sample += pcm_triangle(time, volume, frequency);
@@ -190,18 +198,18 @@ public:
         }
         switch (m_header.bits_per_sample) {
         case _8_BITS_PER_SAMPLE:
-          add_8_bits_sample(sample);
+          !is_stereo ? add_8_bits_sample(sample) : add_8_bits_sample(sample, sample);
           break;
         case _16_BITS_PER_SAMPLE:
-          add_16_bits_sample(sample);
+          !is_stereo ? add_16_bits_sample(sample) : add_16_bits_sample(sample, sample);
           break;
         case _24_BITS_PER_SAMPLE:
-          add_24_bits_sample(sample);
+          !is_stereo ? add_24_bits_sample(sample) : add_16_bits_sample(sample, sample);
           break;
         default:
           return false;
         }
-        time += 0.00001;
+        time += (1.0 / static_cast<double>(m_header.sample_rate));
       }
 
       return true;
