@@ -44,7 +44,12 @@ int main(int arguments_size, char** arguments) {
   output.save("output.wav");
 
   wave_file_t input("output.wav");
-  
+ 
+  if (!input) {
+      std::cout << "Failed to load output.wav it has invalid wav header!!" << std::endl;
+      return 1;
+  }
+
   std::cout << input.get_readable_wave_header() << std::endl;
 
   return 0;

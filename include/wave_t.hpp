@@ -102,6 +102,15 @@ public:
     }
   }
 
+  operator bool() {
+      return m_header.chunk_id == RIFF_ASCII 
+                  && m_header.format == WAVE_ASCII && m_header.sub_chunk_1_id == FMT_ASCII
+                  && m_header.sub_chunk_2_id == DATA_ASCII && (m_header.audio_format != 0)
+                  && (m_header.bits_per_sample > 0) && (m_header.number_of_channels > 0)
+                  && (m_header.sample_rate > 0) && (m_header.byte_rate > 0) && (m_header.chunk_size > 0)
+                  && (m_header.sub_chunk_1_size == DEFAULT_SUB_CHUNK_1_SIZE) && (m_header.sub_chunk_2_size > 0);
+  }
+
   std::optional<uint32_t> operator[](size_t index) const {
     if (index < m_samples.size()) {
       return std::make_optional<uint32_t>(m_samples[index]);
