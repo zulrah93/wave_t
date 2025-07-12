@@ -40,7 +40,7 @@ int main(int arguments_size, char** arguments) {
   //    time += (1.0 / 44100.0);
   //}
   //This helper member function can generate one or a combination of waves only supports mono or stereo for now 
-  output.generate_wave(wave_type_t::sawtooth, sample_size, 440.0, 0.8);
+  output.generate_wave(wave_type_t::sawtooth, sample_size, 440.0, 0.6);
   output.save("output.wav");
 
   wave_file_t input("output.wav");

@@ -102,10 +102,6 @@ public:
     }
   }
 
-  const wave_header_t* get_header(void) {
-      return &m_header;
-  }
-
   operator bool() {
       return m_header.chunk_id == RIFF_ASCII 
                   && m_header.format == WAVE_ASCII && m_header.sub_chunk_1_id == FMT_ASCII
@@ -200,7 +196,7 @@ public:
       if (percent < 0.0) {
         percent = 0.0;
       }
-      return static_cast<double>(INT16_MAX - 1) * percent;
+      return static_cast<double>(INT16_MAX - 1024) * percent;
     };
 
     // Source: https://en.wikipedia.org/wiki/Sign_function
