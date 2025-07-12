@@ -2,17 +2,18 @@
 #define WAVE_T_HPP
 
 #include <bit>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <limits>
+#include <numbers>
+#include <optional>
+#include <sstream>
 #include <stdarg.h>
 #include <string>
 #include <vector>
-#include <numbers>
-#include <cmath>
-#include <limits>
-
 
 constexpr auto RIFF_ASCII = std::byteswap(0x52494646);
 constexpr auto WAVE_ASCII = std::byteswap(0x57415645);
@@ -22,6 +23,7 @@ constexpr auto PCM = 1;
 constexpr auto _8_BITS_PER_SAMPLE = 8;
 constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
+constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
 constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 
 enum wave_type_t : uint8_t { sine = 1, triangle = 2, square = 4, sawtooth = 8 };
@@ -51,9 +53,64 @@ public:
     m_header.sub_chunk_1_id = FMT_ASCII;
     m_header.sub_chunk_2_id = DATA_ASCII;
     m_header.audio_format = PCM;
-    m_header.sub_chunk_1_size = 16;
+    m_header.sub_chunk_1_size = DEFAULT_SUB_CHUNK_1_SIZE;
     m_samples.reserve(DEFAULT_RESERVE_VALUE);
   }
+
+  wave_file_t(const std::string &wav_file_path) {
+    memset(&m_header, 0, sizeof(m_header));
+    auto wave_file_handle = fopen(wav_file_path.c_str(), "rb");
+    if (wave_file_handle) {
+      size_t bytes_read =
+          fread(&m_header, sizeof(m_header), 1, wave_file_handle);
+      if (bytes_read == sizeof(m_header) && m_header.chunk_id == RIFF_ASCII &&
+          m_header.format == WAVE_ASCII) {
+        const size_t sample_size =
+            (m_header.sub_chunk_2_size /
+             (m_header.number_of_channels * (m_header.bits_per_sample / 8)));
+        switch (m_header.bits_per_sample) {
+        case _8_BITS_PER_SAMPLE: {
+          int8_t *samples = new int8_t[sample_size];
+          bytes_read =
+              fread(samples, sizeof(int8_t), sample_size, wave_file_handle);
+          if (bytes_read == sample_size) {
+            for (size_t index = 0; index < sample_size; index++) {
+              m_samples.push_back(static_cast<uint32_t>(samples[index]));
+            }
+          }
+          delete[] samples;
+          break;
+        }
+        case _16_BITS_PER_SAMPLE: {
+          int16_t *samples = new int16_t[sample_size];
+          bytes_read =
+              fread(samples, sizeof(int16_t), sample_size, wave_file_handle);
+          if (bytes_read == sample_size) {
+            for (size_t index = 0; index < sample_size; index++) {
+              m_samples.push_back(static_cast<uint32_t>(samples[index]));
+            }
+          }
+          delete[] samples;
+          break;
+        }
+        case _24_BITS_PER_SAMPLE:
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+
+  std::optional<uint32_t> operator[](size_t index) const {
+    if (index < m_samples.size()) {
+      return std::make_optional<uint32_t>(m_samples[index]);
+    }
+    return std::nullopt;
+  }
+
+  size_t sample_size(void) const { return m_samples.size(); }
+
   void set_sample_rate(const int32_t sample_rate) {
     m_header.sample_rate = sample_rate;
   }
@@ -116,103 +173,119 @@ public:
     return true;
   }
 
-  
-  bool generate_wave(uint8_t wave_type, size_t sample_size,
-                     double frequency, double volume_percent) {
+  bool generate_wave(uint8_t wave_type, size_t sample_size, double frequency,
+                     double volume_percent) {
 
-      if (m_header.sample_rate == 0) {
-          return false;
+    if (m_header.sample_rate == 0) {
+      return false;
+    }
+
+    auto set_volume = [](double percent) {
+      if (percent > 1.0) {
+        percent = 1.0;
       }
-
-      auto set_volume = [](double percent) {
-            if (percent > 1.0) {
-              percent = 1.0;
-            }
-            if (percent < 0.0) {
-              percent = 0.0;
-            }
-            return static_cast<double>(INT16_MAX - 1024) * percent;
-      };
-
-      //Source: https://en.wikipedia.org/wiki/Sign_function
-      auto sign = [](double x) {
-          if (x > 0) {
-              return 1.0;
-          }
-          else if (x < 0) {
-              return -1.0;
-          }
-          else {
-              return 0.0;
-          }
-      };
-
-      // Source: https://en.wikipedia.org/wiki/Sine_wave
-      auto pcm_sine = [](double _frequency, double time, double amplititude, double phase) {
-            return static_cast<int16_t>(amplititude * sin((2 * std::numbers::pi * _frequency * time) + phase));
-      };
-
-      // Source: https://en.wikipedia.org/wiki/Triangle_wave
-      auto pcm_triangle = [](double time, double amplititude, double _frequency) {
-            const double period = (1.0 / _frequency);
-            return static_cast<int16_t>(fabs(((2.0 * amplititude) / std::numbers::pi) * asin(sin(2 * time * (std::numbers::pi / period )))));
-      };
-
-      // Source: https://en.wikipedia.org/wiki/Square_wave_(waveform)
-      auto pcm_square = [sign](double time, double amplititude, double _frequency) {
-            return static_cast<int16_t>(amplititude * sign(sin(2 * std::numbers::pi * _frequency * time)));
-      };
-
-      // Source: https://en.wikipedia.org/wiki/Sawtooth_wave
-      auto pcm_saw_tooth = [](double time, double amplititude, double _frequency) {
-          const double period = (1.0 / _frequency);
-          return static_cast<int16_t>(2.0 * amplititude * ((time / period) - floor(0.5 + (time / period))));
-      };
-
-      bool is_stereo = m_header.number_of_channels == 2;
-      const double phase = 0.0;
-      double time = 0.0;
-      size_t sample_count = 0;
-      for (size_t _ = 0; _ < sample_size; _++) {
-        size_t wave_count = static_cast<size_t>((wave_type & wave_type_t::sine) == (wave_type_t::sine)) +
-                                static_cast<size_t>((wave_type & wave_type_t::triangle) == (wave_type_t::triangle)) +
-                                static_cast<size_t>((wave_type & wave_type_t::square) == (wave_type_t::square)) +
-                                static_cast<size_t>((wave_type & wave_type_t::sawtooth) == (wave_type_t::sawtooth));
-        const double volume = set_volume(volume_percent / static_cast<double>(wave_count));
-        int16_t sample = 0;
-        if ((wave_type & wave_type_t::sine)) {
-          sample += pcm_sine(frequency, time, volume, phase);
-          if (sample_count >= static_cast<size_t>(static_cast<double>(m_header.sample_rate))) {
-              sample_count = 0;
-          }
-          sample_count++;
-        }
-        if ((wave_type & wave_type_t::triangle)) {
-          sample += pcm_triangle(time, volume, frequency);
-        }
-        if ((wave_type & wave_type_t::square)) {
-          sample += pcm_square(time, volume, frequency);
-        }
-        if ((wave_type & wave_type_t::sawtooth)) {
-           sample += pcm_saw_tooth(time, volume, frequency);
-        }
-        switch (m_header.bits_per_sample) {
-        case _8_BITS_PER_SAMPLE:
-          !is_stereo ? add_8_bits_sample(sample) : add_8_bits_sample(sample, sample);
-          break;
-        case _16_BITS_PER_SAMPLE:
-          !is_stereo ? add_16_bits_sample(sample) : add_16_bits_sample(sample, sample);
-          break;
-        case _24_BITS_PER_SAMPLE:
-          !is_stereo ? add_24_bits_sample(sample) : add_16_bits_sample(sample, sample);
-          break;
-        default:
-          return false;
-        }
-        time += (1.0 / static_cast<double>(m_header.sample_rate));
+      if (percent < 0.0) {
+        percent = 0.0;
       }
+      return static_cast<double>(INT16_MAX - 1024) * percent;
+    };
 
-      return true;
+    // Source: https://en.wikipedia.org/wiki/Sign_function
+    auto sign = [](double x) {
+      if (x > 0) {
+        return 1.0;
+      } else if (x < 0) {
+        return -1.0;
+      } else {
+        return 0.0;
+      }
+    };
+
+    // Source: https://en.wikipedia.org/wiki/Sine_wave
+    auto pcm_sine = [](double _frequency, double time, double amplititude,
+                       double phase) {
+      return static_cast<int16_t>(
+          amplititude *
+          sin((2 * std::numbers::pi * _frequency * time) + phase));
+    };
+
+    // Source: https://en.wikipedia.org/wiki/Triangle_wave
+    auto pcm_triangle = [](double time, double amplititude, double _frequency) {
+      const double period = (1.0 / _frequency);
+      return static_cast<int16_t>(
+          fabs(((2.0 * amplititude) / std::numbers::pi) *
+               asin(sin(2 * time * (std::numbers::pi / period)))));
+    };
+
+    // Source: https://en.wikipedia.org/wiki/Square_wave_(waveform)
+    auto pcm_square = [sign](double time, double amplititude,
+                             double _frequency) {
+      return static_cast<int16_t>(
+          amplititude * sign(sin(2 * std::numbers::pi * _frequency * time)));
+    };
+
+    // Source: https://en.wikipedia.org/wiki/Sawtooth_wave
+    auto pcm_saw_tooth = [](double time, double amplititude,
+                            double _frequency) {
+      const double period = (1.0 / _frequency);
+      return static_cast<int16_t>(
+          2.0 * amplititude * ((time / period) - floor(0.5 + (time / period))));
+    };
+
+    bool is_stereo = m_header.number_of_channels == 2;
+    const double phase = 0.0;
+    double time = 0.0;
+    size_t sample_count = 0;
+    for (size_t _ = 0; _ < sample_size; _++) {
+      size_t wave_count =
+          static_cast<size_t>((wave_type & wave_type_t::sine) ==
+                              (wave_type_t::sine)) +
+          static_cast<size_t>((wave_type & wave_type_t::triangle) ==
+                              (wave_type_t::triangle)) +
+          static_cast<size_t>((wave_type & wave_type_t::square) ==
+                              (wave_type_t::square)) +
+          static_cast<size_t>((wave_type & wave_type_t::sawtooth) ==
+                              (wave_type_t::sawtooth));
+      const double volume =
+          set_volume(volume_percent / static_cast<double>(wave_count));
+      int16_t sample = 0;
+      if ((wave_type & wave_type_t::sine)) {
+        sample += pcm_sine(frequency, time, volume, phase);
+        if (sample_count >=
+            static_cast<size_t>(static_cast<double>(m_header.sample_rate))) {
+          sample_count = 0;
+        }
+        sample_count++;
+      }
+      if ((wave_type & wave_type_t::triangle)) {
+        sample += pcm_triangle(time, volume, frequency);
+      }
+      if ((wave_type & wave_type_t::square)) {
+        sample += pcm_square(time, volume, frequency);
+      }
+      if ((wave_type & wave_type_t::sawtooth)) {
+        sample += pcm_saw_tooth(time, volume, frequency);
+      }
+      switch (m_header.bits_per_sample) {
+      case _8_BITS_PER_SAMPLE:
+        !is_stereo ? add_8_bits_sample(sample)
+                   : add_8_bits_sample(sample, sample);
+        break;
+      case _16_BITS_PER_SAMPLE:
+        !is_stereo ? add_16_bits_sample(sample)
+                   : add_16_bits_sample(sample, sample);
+        break;
+      case _24_BITS_PER_SAMPLE:
+        !is_stereo ? add_24_bits_sample(sample)
+                   : add_16_bits_sample(sample, sample);
+        break;
+      default:
+        return false;
+      }
+      time += (1.0 / static_cast<double>(m_header.sample_rate));
+    }
+
+    return true;
   }
 
   bool save(const std::string &file_path) {
@@ -239,6 +312,35 @@ public:
     }
     }
   }
+
+#ifdef DEBUG
+
+  std::string get_readable_wave_header(void) {
+    std::stringstream header;
+    header << "chunk_id=0x" << std::hex << std::byteswap(m_header.chunk_id)
+           << std::endl;
+    header << "chunk_size=" << std::dec << m_header.chunk_size << std::endl;
+    header << "format=0x" << std::hex << std::byteswap(m_header.format)
+           << std::endl;
+    header << "sub_chunk_1_id=0x" << std::byteswap(m_header.sub_chunk_1_id)
+           << std::endl;
+    header << "sub_chunk_1_size=" << std::dec << m_header.sub_chunk_1_size
+           << std::endl;
+    header << "audio_format="
+           << ((m_header.audio_format == 1) ? "PCM" : "Unknown") << std::endl;
+    header << "number_of_channels=" << m_header.number_of_channels << std::endl;
+    header << "sample_rate=" << m_header.sample_rate << std::endl;
+    header << "byte_rate=" << m_header.byte_rate << std::endl;
+    header << "block_align=" << m_header.block_align << std::endl;
+    header << "bits_per_sample=" << m_header.bits_per_sample << std::endl;
+    header << "sub_chunk_2_id=0x" << std::hex << std::byteswap(m_header.sub_chunk_2_id)
+           << std::endl;
+    header << "sub_chunk_2_size=" << std::dec << m_header.sub_chunk_2_size
+           << std::endl;
+    return header.str();
+  }
+
+#endif
 
 private:
   bool save_as_8_bits(const std::string &file_path) {
