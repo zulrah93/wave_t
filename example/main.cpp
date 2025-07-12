@@ -50,7 +50,7 @@ int main(int arguments_size, char** arguments) {
       return 1;
   }
 
-  std::cout << input.get_readable_wave_header() << std::endl;
+  std::cout << input.get_readable_wave_header() << std::endl << "number_of_samples=" << input.sample_size() << std::endl;
 
   return 0;
 }

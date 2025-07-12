@@ -62,12 +62,9 @@ public:
     auto wave_file_handle = fopen(wav_file_path.c_str(), "rb");
     if (wave_file_handle) {
       size_t bytes_read =
-          fread(&m_header, sizeof(m_header), 1, wave_file_handle);
-      if (bytes_read == sizeof(m_header) && m_header.chunk_id == RIFF_ASCII &&
-          m_header.format == WAVE_ASCII) {
-        const size_t sample_size =
-            (m_header.sub_chunk_2_size /
-             (m_header.number_of_channels * (m_header.bits_per_sample / 8)));
+          fread(&m_header, sizeof(uint8_t), sizeof(m_header), wave_file_handle);
+      if (bytes_read == sizeof(m_header)) {
+        const size_t sample_size = m_header.sub_chunk_2_size / m_header.block_align;
         switch (m_header.bits_per_sample) {
         case _8_BITS_PER_SAMPLE: {
           int8_t *samples = new int8_t[sample_size];
@@ -85,7 +82,7 @@ public:
           int16_t *samples = new int16_t[sample_size];
           bytes_read =
               fread(samples, sizeof(int16_t), sample_size, wave_file_handle);
-          if (bytes_read == sample_size) {
+          if (bytes_read <= (m_header.block_align * sample_size)) {
             for (size_t index = 0; index < sample_size; index++) {
               m_samples.push_back(static_cast<uint32_t>(samples[index]));
             }
