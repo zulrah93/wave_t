@@ -28,6 +28,33 @@ constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 
 enum wave_type_t : uint8_t { sine = 1, triangle = 2, square = 4, sawtooth = 8 };
 
+//Complex number which will be used by DFT
+struct complex_t {
+    float real_part;
+    float imaginary_part;
+    float magnitude;
+};
+
+void discrete_fourier_transform(size_t sample_size, const std::vector<double>& time_domain,
+                                std::vector<complex_t>& frequency_domain, const bool& reverse_operation) {
+    // O(n^2)
+    for(size_t frequency = 0; frequency < sample_size; frequency++) {
+        complex_t result;
+        result.real_part = 0.0;
+        result.imaginary_part = 0.0;
+        result.magnitude = 0.0;
+        for (size_t n = 0; n < sample_size; n++) {
+            float x = static_cast<float>(time_domain[n]);
+            float ratio = (static_cast<float>(n) / static_cast<float>(sample_size));
+            float z = 2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
+            result.real_part += x * cos(z);
+            result.imaginary_part -= x * sin(z);
+        }
+        result.magnitude = sqrt((result.real_part * result.real_part) + (result.imaginary_part * result.imaginary_part));
+        frequency_domain.push_back(result);
+    }
+}
+
 struct wave_header_t {
   uint32_t chunk_id;
   uint32_t chunk_size;
@@ -212,7 +239,7 @@ public:
                        double phase) {
       return static_cast<int16_t>(
           amplititude *
-          sin((2 * std::numbers::pi * _frequency * time) + phase));
+          sin((2.0 * std::numbers::pi * _frequency * time) + phase));
     };
 
     // Source: https://en.wikipedia.org/wiki/Triangle_wave
@@ -220,7 +247,7 @@ public:
       const double period = (1.0 / _frequency);
       return static_cast<int16_t>(
           fabs(((2.0 * amplititude) / std::numbers::pi) *
-               asin(sin(2 * time * (std::numbers::pi / period)))));
+               asin(sin(2.0 * time * (std::numbers::pi / period)))));
     };
 
     // Source: https://en.wikipedia.org/wiki/Square_wave_(waveform)
@@ -317,6 +344,17 @@ public:
       return false;
     }
     }
+  }
+
+  std::vector<complex_t> get_frequency_domain(size_t sample_size) {
+      std::vector<complex_t> frequency_domain;
+      std::vector<double> time_domain;
+      time_domain.reserve(m_samples.size());
+      for (auto& sample : m_samples) {
+          time_domain.push_back(static_cast<double>(sample));
+      }
+      discrete_fourier_transform(sample_size, time_domain, frequency_domain, false);
+      return frequency_domain;
   }
 
 #ifdef DEBUG
