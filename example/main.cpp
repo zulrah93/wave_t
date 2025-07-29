@@ -27,8 +27,8 @@ int main(int arguments_size, char** arguments) {
   std::cout << input.get_readable_wave_header() << std::endl << "number_of_samples=" << input.sample_size() << std::endl;
   
   const size_t dft_sample_size = sample_rate / 2;
-
-  auto frequency_domain = input.get_frequency_domain(dft_sample_size);
+  const bool async = true; // DFT can be calculated asynchronously may help performance
+  auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
   double max = std::numeric_limits<float>::min();

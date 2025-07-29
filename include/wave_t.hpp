@@ -14,6 +14,7 @@
 #include <stdarg.h>
 #include <string>
 #include <vector>
+#include <future>
 
 constexpr auto RIFF_ASCII = std::byteswap(0x52494646);
 constexpr auto WAVE_ASCII = std::byteswap(0x57415645);
@@ -35,8 +36,11 @@ struct complex_t {
     float magnitude;
 };
 
-void discrete_fourier_transform(size_t sample_size, const std::vector<double>& time_domain,
-                                std::vector<complex_t>& frequency_domain, const bool& reverse_operation) {
+void inverse_discrete_fourier_transform(size_t sample_size, std::vector<float>& time_domain, const std::vector<complex_t>& frequency_domain) {
+    //TODO: Implement inverse dft
+}
+
+void discrete_fourier_transform(size_t sample_size, const std::vector<float>& time_domain, std::vector<complex_t>& frequency_domain) {
     // O(n^2)
     for(size_t frequency = 0; frequency < sample_size; frequency++) {
         complex_t result;
@@ -52,6 +56,31 @@ void discrete_fourier_transform(size_t sample_size, const std::vector<double>& t
         }
         result.magnitude = sqrt((result.real_part * result.real_part) + (result.imaginary_part * result.imaginary_part));
         frequency_domain.push_back(result);
+    }
+}
+
+void discrete_fourier_transform_async(size_t sample_size, const std::vector<float>& time_domain, std::vector<complex_t>& frequency_domain) {
+    std::vector<std::future<complex_t>> futures;
+    for(size_t frequency = 0; frequency < sample_size; frequency++) {
+        auto future = std::async(std::launch::async, [&sample_size, &time_domain, frequency]() {
+            complex_t result;
+            result.real_part = 0.0;
+            result.imaginary_part = 0.0;
+            result.magnitude = 0.0;
+            for (size_t n = 0; n < sample_size; n++) {
+                float x = static_cast<float>(time_domain[n]);
+                float ratio = (static_cast<float>(n) / static_cast<float>(sample_size));
+                float z = 2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
+                result.real_part += x * cos(z);
+              result.imaginary_part -= x * sin(z);
+            }
+            result.magnitude = sqrt((result.real_part * result.real_part) + (result.imaginary_part * result.imaginary_part));
+            return result;
+        });
+        futures.push_back(std::move(future));
+    }
+    for(auto& future : futures) {
+        frequency_domain.push_back(future.get());
     }
 }
 
@@ -346,15 +375,24 @@ public:
     }
   }
 
-  std::vector<complex_t> get_frequency_domain(size_t sample_size) {
+  std::vector<complex_t> get_frequency_domain(size_t sample_size, bool async) {
       std::vector<complex_t> frequency_domain;
-      std::vector<double> time_domain;
+      std::vector<float> time_domain;
       time_domain.reserve(m_samples.size());
       for (auto& sample : m_samples) {
           time_domain.push_back(static_cast<double>(sample));
       }
-      discrete_fourier_transform(sample_size, time_domain, frequency_domain, false);
+      if (async) {
+        discrete_fourier_transform_async(sample_size, time_domain, frequency_domain); 
+      }
+      else {
+        discrete_fourier_transform(sample_size, time_domain, frequency_domain);
+      }
       return frequency_domain;
+  }
+
+  void set_samples_from_frequency_domain(const std::vector<complex_t>& frequency_domain) {
+      //TODO: Implement converting frequency domain to time domain and adding the samples 
   }
 
 #ifdef DEBUG
