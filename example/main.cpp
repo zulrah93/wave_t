@@ -44,5 +44,16 @@ int main(int arguments_size, char** arguments) {
   std::cout << "Index: " << detected_frequency_index << std::endl;
   std::cout << "Fundamental frequency: " << (static_cast<float>(detected_frequency_index) * (static_cast<float>(sample_rate) / (static_cast<float>(dft_sample_size)))) << std::endl; 
 
+  std::cout << "Testing IDFT by writing wav file from frequency domain..." << std::endl;
+
+  wave_file_t idft_wav_file(dft_sample_size, frequency_domain);
+  output.set_sample_rate(sample_rate);
+  output.set_number_of_channels(1);
+  output.set_bits_per_sample(16);
+  output.save("idft_output.wav");
+
+
+  std::cout << "Demo finished!! If you don't see this message assume process crashed!" << std::endl;
+
   return 0;
 }
