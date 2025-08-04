@@ -100,10 +100,7 @@ void discrete_fourier_transform_async(
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
     auto future = std::async(std::launch::async, [&sample_size, &time_domain,
                                                   frequency]() {
-      complex_t result;
-      result.real_part = 0.0;
-      result.imaginary_part = 0.0;
-      result.magnitude = 0.0;
+      complex_t result{0.0f, 0.0f, 0.0f};
       for (size_t n = 0; n < sample_size; n++) {
         const float &x = time_domain[n];
         const float ratio =

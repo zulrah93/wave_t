@@ -50,8 +50,7 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Fundamental frequency: "
             << (static_cast<float>(detected_frequency_index) *
                 (static_cast<float>(sample_rate) /
-                 (static_cast<float>(dft_sample_size))))
-            << std::endl;
+                 (static_cast<float>(dft_sample_size)))) << " Amplitiude (RMS): " << max << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
