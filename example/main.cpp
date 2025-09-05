@@ -39,7 +39,7 @@ int main(int arguments_size, char **arguments) {
   double max = std::numeric_limits<float>::min();
 
   for (size_t frequency = 0; frequency < frequency_domain.size(); frequency++) {
-    float magnitude = frequency_domain[frequency].magnitude;
+    float magnitude =  std::norm(frequency_domain[frequency]);
     if (magnitude >= max) {
       detected_frequency_index = frequency;
       max = magnitude;

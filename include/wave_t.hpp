@@ -15,6 +15,7 @@
 #include <stdarg.h>
 #include <string>
 #include <vector>
+#include <complex>
 
 constexpr auto RIFF_ASCII = std::byteswap(0x52494646);
 constexpr auto WAVE_ASCII = std::byteswap(0x57415645);
@@ -29,23 +30,16 @@ constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 
 enum wave_type_t : uint8_t { sine = 1, triangle = 2, square = 4, sawtooth = 8 };
 
-// Complex number which will be used by DFT
-struct complex_t {
-  float real_part;
-  float imaginary_part;
-  float magnitude;
-};
-
 void inverse_discrete_fourier_transform_async(
     size_t sample_size, std::vector<float> &time_domain,
-    const std::vector<complex_t> &frequency_domain) {
+    const std::vector<std::complex<float>> &frequency_domain) {
   std::vector<std::future<float>> futures;
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
     auto future = std::async(std::launch::async, [&sample_size, frequency,
                                                   &frequency_domain]() {
       float real = 0.0f;
       for (size_t n = 0; n < sample_size; n++) {
-        const float x = frequency_domain[n].magnitude;
+        const float x = std::norm(frequency_domain[n]);
         float ratio = (static_cast<float>(n) / static_cast<float>(sample_size));
         float z =
             2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
@@ -62,11 +56,11 @@ void inverse_discrete_fourier_transform_async(
 
 void inverse_discrete_fourier_transform(
     size_t sample_size, std::vector<float> &time_domain,
-    const std::vector<complex_t> &frequency_domain) {
+    const std::vector<std::complex<float>> &frequency_domain) {
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
     float real = 0.0f;
     for (size_t n = 0; n < sample_size; n++) {
-      const float x = frequency_domain[n].magnitude;
+      const float x = std::norm(frequency_domain[n]);
       float ratio = (static_cast<float>(n) / static_cast<float>(sample_size));
       float z = 2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
       real += x * cos(z);
@@ -77,40 +71,36 @@ void inverse_discrete_fourier_transform(
 
 void discrete_fourier_transform(size_t sample_size,
                                 const std::vector<float> &time_domain,
-                                std::vector<complex_t> &frequency_domain) {
+                                std::vector<std::complex<float>> &frequency_domain) {
   // O(n^2)
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
-    complex_t result{0.0f, 0.0f, 0.0f};
+    std::complex<float> result = 0.0f + 0.0if;
     for (size_t n = 0; n < sample_size; n++) {
       const float &x = time_domain[n];
       float ratio = (static_cast<float>(n) / static_cast<float>(sample_size));
       float z = 2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
-      result.real_part += x * cos(z);
-      result.imaginary_part -= x * sin(z);
+      result += std::complex<float>((x * cos(z)), -(x * sin(z)));
     }
-    result.magnitude = std::hypotf(result.real_part, result.imaginary_part);
     frequency_domain.push_back(result);
   }
 }
 
 void discrete_fourier_transform_async(
     size_t sample_size, const std::vector<float> &time_domain,
-    std::vector<complex_t> &frequency_domain) {
-  std::vector<std::future<complex_t>> futures;
+    std::vector<std::complex<float>> &frequency_domain) {
+  std::vector<std::future<std::complex<float>>> futures;
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
     auto future = std::async(std::launch::async, [&sample_size, &time_domain,
                                                   frequency]() {
-      complex_t result{0.0f, 0.0f, 0.0f};
-      for (size_t n = 0; n < sample_size; n++) {
+    std::complex<float> result = 0.0f + 0.0if;
+    for (size_t n = 0; n < sample_size; n++) {
         const float &x = time_domain[n];
         const float ratio =
             (static_cast<float>(n) / static_cast<float>(sample_size));
         const float z =
             2.0 * std::numbers::pi * static_cast<float>(frequency) * ratio;
-        result.real_part += x * cos(z);
-        result.imaginary_part -= x * sin(z);
+        result += std::complex<float>((x * cos(z)), -(x * sin(z)));
       }
-      result.magnitude = std::hypotf(result.real_part, result.imaginary_part);
       return result;
     });
     futures.push_back(std::move(future));
@@ -152,7 +142,7 @@ public:
   // Takes a frequency domain and constructs wave samples for playback --
   // supports async loading of samples or not
   explicit wave_file_t(const size_t sample_size,
-                       const std::vector<complex_t> &frequency_domain,
+                       const std::vector<std::complex<float>> &frequency_domain,
                        bool async = true)
       : wave_file_t() {
     std::vector<float> time_domain;
@@ -437,8 +427,8 @@ public:
     }
   }
 
-  std::vector<complex_t> get_frequency_domain(size_t sample_size, bool async) {
-    std::vector<complex_t> frequency_domain;
+  std::vector<std::complex<float>> get_frequency_domain(size_t sample_size, bool async) {
+    std::vector<std::complex<float>> frequency_domain;
     std::vector<float> time_domain;
     time_domain.reserve(m_samples.size());
     for (auto &sample : m_samples) {
