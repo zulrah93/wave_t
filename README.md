@@ -40,4 +40,9 @@ Also supports adding samples by converting a frequency domain (a vector of compl
 
 Also library will as a 4 operator/oscillator FM synthesis (very basic and probably not good but you tell me your honest thoughts -- just having fun with it)
 
+### Screenshot of audacity showing the generated synth in the example folder
+
+<img width="2462" height="196" alt="image" src="https://github.com/user-attachments/assets/b88faef8-bb5e-41cf-9eeb-78d9ec3249bf" />
+
+
 
