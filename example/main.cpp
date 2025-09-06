@@ -61,6 +61,38 @@ int main(int arguments_size, char **arguments) {
   output.set_bits_per_sample(16);
   output.save("idft_output.wav");
 
+  std::cout << "Generating basic synth using sine 440 hz modulated by triangle and saw combined at  44hz" << std::endl;
+
+  wave_file_t synth_output;
+  synth_output.set_sample_rate(sample_rate);
+  synth_output.set_number_of_channels(1);
+  synth_output.set_bits_per_sample(16);
+
+  wave_file_t::synth_config_t configuration;
+
+  configuration.oscillator_a.operator_type = wave_file_t::carrier;
+  configuration.oscillator_a.wave_type = wave_type_t::sine;
+  configuration.oscillator_a.frequency = 440.0;
+  configuration.oscillator_a.carrier_to_modulate = nullptr;
+
+  configuration.oscillator_b.operator_type = wave_file_t::modulation;
+  configuration.oscillator_b.wave_type = wave_type_t::triangle | wave_type_t::sawtooth;
+  configuration.oscillator_b.frequency = 44.0;
+  configuration.oscillator_b.carrier_to_modulate = nullptr;
+
+  memset(&configuration.oscillator_c, 0, sizeof(configuration.oscillator_c));
+  memset(&configuration.oscillator_d, 0, sizeof(configuration.oscillator_d));
+ 
+  const size_t synth_sample_size = sample_rate * 4ul; // 8 seconds
+
+  if (synth_output.generate_synth(synth_sample_size, 0.6, configuration)) {
+      synth_output.save("synth_output.wav");
+  }
+  else {
+     std::cout << "Invalid synth configuration or failed to generate synth -- sorry." << std::endl;
+  }
+
+
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;

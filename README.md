@@ -36,4 +36,8 @@ DFT and IDFT for pitch detection or FM synthesis, it also supports calculating t
 
 Also supports adding samples by converting a frequency domain (a vector of complex numbers) to PCM samples (essentially the time domain of the signal).
 
+## WIP
+
+Also library will as a 4 operator/oscillator FM synthesis (very basic and probably not good but you tell me your honest thoughts -- just having fun with it)
+
 
