@@ -72,18 +72,19 @@ int main(int arguments_size, char **arguments) {
 
   configuration.oscillator_a.operator_type = wave_file_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sine;
-  configuration.oscillator_a.frequency = 440.0;
-  configuration.oscillator_a.carrier_to_modulate = nullptr;
+  configuration.oscillator_a.frequency = 261.626;
+  configuration.oscillator_a.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
 
   configuration.oscillator_b.operator_type = wave_file_t::modulation;
-  configuration.oscillator_b.wave_type = wave_type_t::triangle | wave_type_t::sawtooth;
-  configuration.oscillator_b.frequency = 44.0;
-  configuration.oscillator_b.carrier_to_modulate = nullptr;
+  configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_b.frequency = 26.1626 * 5.0;
+  configuration.oscillator_b.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
+  configuration.oscillator_b.modulation_amplitude = 1.07;
 
   memset(&configuration.oscillator_c, 0, sizeof(configuration.oscillator_c));
   memset(&configuration.oscillator_d, 0, sizeof(configuration.oscillator_d));
  
-  const size_t synth_sample_size = sample_rate * 4ul; // 8 seconds
+  const size_t synth_sample_size = sample_rate * 5ul; // 8 seconds
 
   if (synth_output.generate_synth(synth_sample_size, 0.6, configuration)) {
       synth_output.save("synth_output.wav");
