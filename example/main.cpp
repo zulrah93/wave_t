@@ -3,6 +3,32 @@
 #include <limits>
 #include <wave_t.hpp>
 
+constexpr double C4_FREQUENCY = 261.626;
+
+double detune(double x) {
+
+  if (x < 0.0) {
+    x = 0.0;
+  }
+  if (x > 1.0) {
+    x = 1.0;
+  }
+
+  // https://www.adamszabo.com/internet/adam_szabo_how_to_emulate_the_super_saw.pdf
+
+  return (10028.7312891634 * std::pow(x, 11.0)) -
+         (50818.8652045924 * std::pow(x, 10.0)) +
+         (111363.4808729368 * std::pow(x, 9.0)) -
+         (138150.6761080548 * std::pow(x, 8.0)) +
+         (106649.6679158292 * std::pow(x, 7.0)) -
+         (53046.9642751875 * pow(x, 6)) +
+         (17019.9518580080 * std::pow(x, 5.0)) -
+         (3425.0836591318 * std::pow(x, 4.0)) +
+         (404.2703938388 * std::pow(x, 3.0)) -
+         (24.1878824391 * std::pow(x, 2.0)) +
+         (0.6717417634 * std::pow(x, 2.0)) + 0.0030115596;
+}
+
 /* Example using the header only wave file reader and writer class in wave_t.hpp
  */
 
@@ -39,7 +65,7 @@ int main(int arguments_size, char **arguments) {
   double max = std::numeric_limits<float>::min();
 
   for (size_t frequency = 0; frequency < frequency_domain.size(); frequency++) {
-    float magnitude =  std::norm(frequency_domain[frequency]);
+    float magnitude = std::norm(frequency_domain[frequency]);
     if (magnitude >= max) {
       detected_frequency_index = frequency;
       max = magnitude;
@@ -50,7 +76,8 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Fundamental frequency: "
             << (static_cast<float>(detected_frequency_index) *
                 (static_cast<float>(sample_rate) /
-                 (static_cast<float>(dft_sample_size)))) << " Amplitiude (RMS): " << max << std::endl;
+                 (static_cast<float>(dft_sample_size))))
+            << " Amplitiude (RMS): " << max << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
@@ -61,7 +88,8 @@ int main(int arguments_size, char **arguments) {
   output.set_bits_per_sample(16);
   output.save("idft_output.wav");
 
-  std::cout << "Generating basic synth using sine 440 hz modulated by triangle and saw combined at  44hz" << std::endl;
+  std::cout << "Generating a super saw (4 osc ) at C4 (261.626 HZ)"
+            << std::endl;
 
   wave_file_t synth_output;
   synth_output.set_sample_rate(sample_rate);
@@ -70,29 +98,42 @@ int main(int arguments_size, char **arguments) {
 
   wave_file_t::synth_config_t configuration;
 
+  // Supersaw example although true supersaw uses 7 osc
+
   configuration.oscillator_a.operator_type = wave_file_t::carrier;
-  configuration.oscillator_a.wave_type = wave_type_t::sine;
-  configuration.oscillator_a.frequency = 261.626;
-  configuration.oscillator_a.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
+  configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_a.frequency = C4_FREQUENCY * 0.98047643 * detune(0.02);
+  configuration.oscillator_a.osc_to_modulate =
+      wave_file_t::oscillator_selection_t::none_selected;
 
-  configuration.oscillator_b.operator_type = wave_file_t::modulation;
+  configuration.oscillator_b.operator_type = wave_file_t::carrier;
   configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_b.frequency = 26.1626 * 5.0;
-  configuration.oscillator_b.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
-  configuration.oscillator_b.modulation_amplitude = 0.069;
+  configuration.oscillator_b.frequency = C4_FREQUENCY;
 
-  memset(&configuration.oscillator_c, 0, sizeof(configuration.oscillator_c));
+  configuration.oscillator_c.operator_type = wave_file_t::carrier;
+  configuration.oscillator_c.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 1.01991221; //* detune(0.2);
+  configuration.oscillator_c.osc_to_modulate =
+      wave_file_t::oscillator_selection_t::none_selected;
+
+  configuration.oscillator_d.operator_type = wave_file_t::modulation;
+  configuration.oscillator_d.wave_type = wave_type_t::sine;
+  configuration.oscillator_d.frequency = C4_FREQUENCY;
+  configuration.oscillator_d.modulation_amplitude = 0.0000125;
+  configuration.oscillator_d.osc_to_modulate =
+  wave_file_t::oscillator_selection_t::oscillator_b;
+
   memset(&configuration.oscillator_d, 0, sizeof(configuration.oscillator_d));
- 
+
   const size_t synth_sample_size = sample_rate * 4ul; // 8 seconds
 
-  if (synth_output.generate_synth(synth_sample_size, 0.6, configuration)) {
-      synth_output.save("synth_output.wav");
+  if (synth_output.generate_synth(synth_sample_size, 0.5, configuration)) {
+    synth_output.save("synth_output.wav");
+  } else {
+    std::cout
+        << "Invalid synth configuration or failed to generate synth -- sorry."
+        << std::endl;
   }
-  else {
-     std::cout << "Invalid synth configuration or failed to generate synth -- sorry." << std::endl;
-  }
-
 
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"

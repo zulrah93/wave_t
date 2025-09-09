@@ -410,7 +410,7 @@ public:
         [&sample_size, &volume, &is_stereo, sample_rate,
          &configuration](void) { // TODO: Replace this lambda with a function
           std::vector<uint32_t> samples;
-          if (configuration.oscillator_a.operator_type !=
+          if (configuration.oscillator_a.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
           }
@@ -421,7 +421,7 @@ public:
             uint32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
-            for (uint8_t osc_index = 1; osc_index < MAX_OSC_SUPPORT;
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
                  osc_index++) {
 
               oscillator_config_t *selected_osc = nullptr;
@@ -436,6 +436,10 @@ public:
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
                 selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
                 break;
               }
               }
@@ -510,7 +514,7 @@ public:
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
           std::vector<uint32_t> samples;
-          if (configuration.oscillator_b.operator_type !=
+          if (configuration.oscillator_b.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
           }
@@ -521,7 +525,7 @@ public:
             uint32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
-            for (uint8_t osc_index = 1; osc_index < MAX_OSC_SUPPORT;
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
                  osc_index++) {
 
               oscillator_config_t *selected_osc = nullptr;
@@ -536,6 +540,10 @@ public:
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
                 selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
                 break;
               }
               }
@@ -612,7 +620,7 @@ public:
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
           std::vector<uint32_t> samples;
-          if (configuration.oscillator_c.operator_type !=
+          if (configuration.oscillator_c.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
           }
@@ -623,9 +631,8 @@ public:
             uint32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
-            for (uint8_t osc_index = 1; osc_index < MAX_OSC_SUPPORT;
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
                  osc_index++) {
-
               oscillator_config_t *selected_osc = nullptr;
               switch (osc_index) {
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_b): {
@@ -638,6 +645,10 @@ public:
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
                 selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
                 break;
               }
               }
@@ -714,7 +725,7 @@ public:
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
           std::vector<uint32_t> samples;
-          if (configuration.oscillator_d.operator_type !=
+          if (configuration.oscillator_d.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
           }
@@ -725,7 +736,7 @@ public:
             uint32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
-            for (uint8_t osc_index = 1; osc_index < MAX_OSC_SUPPORT;
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
                  osc_index++) {
 
               oscillator_config_t *selected_osc = nullptr;
@@ -742,6 +753,11 @@ public:
                 selected_osc = &configuration.oscillator_d;
                 break;
               }
+              default: {
+                selected_osc = nullptr;
+                break;
+              }
+
               }
 
               if (nullptr == selected_osc) {
@@ -817,7 +833,7 @@ public:
     auto wave_d = osc_d_carrier_future.get();
 
     for (size_t index{}; index < sample_size; index++) {
-      int16_t sample{};
+      uint32_t sample{};
       double frequency_offset = 0.0;
 
       if (index < wave_a.size()) {
