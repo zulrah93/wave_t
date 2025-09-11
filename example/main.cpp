@@ -42,7 +42,7 @@ int main(int arguments_size, char **arguments) {
   const size_t sample_size = 44100 * 60 * 5; // 5 minutes of 16-bit PCM sample
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
-  output.generate_wave(wave_type_t::sine, sample_size, 440.0, 0.6);
+  output.generate_wave(wave_type_t::sawtooth, sample_size, C4_FREQUENCY, 0.6);
   output.save("output.wav");
 
   wave_file_t input("output.wav");
@@ -98,36 +98,39 @@ int main(int arguments_size, char **arguments) {
 
   wave_file_t::synth_config_t configuration;
 
-  // Supersaw example although true supersaw uses 7 osc
+  // Supersaw example -- hopefully :P
+  
+  constexpr double detune_amount = 0.05;
 
   configuration.oscillator_a.operator_type = wave_file_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_a.frequency = C4_FREQUENCY * 0.98047643 * detune(0.02);
+  configuration.oscillator_a.frequency = C4_FREQUENCY * (1.0 - (0.98047643 * detune(detune_amount)));
   configuration.oscillator_a.osc_to_modulate =
       wave_file_t::oscillator_selection_t::none_selected;
 
   configuration.oscillator_b.operator_type = wave_file_t::carrier;
   configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_b.frequency = C4_FREQUENCY;
+  configuration.oscillator_b.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
 
   configuration.oscillator_c.operator_type = wave_file_t::carrier;
   configuration.oscillator_c.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_c.frequency = C4_FREQUENCY * 1.01991221; //* detune(0.2);
+  configuration.oscillator_c.frequency = C4_FREQUENCY * (1.0 - (1.01991221 * detune(detune_amount)));
   configuration.oscillator_c.osc_to_modulate =
       wave_file_t::oscillator_selection_t::none_selected;
 
-  configuration.oscillator_d.operator_type = wave_file_t::modulation;
-  configuration.oscillator_d.wave_type = wave_type_t::sine;
-  configuration.oscillator_d.frequency = C4_FREQUENCY;
-  configuration.oscillator_d.modulation_amplitude = 0.0000125;
-  configuration.oscillator_d.osc_to_modulate =
-  wave_file_t::oscillator_selection_t::oscillator_b;
 
   memset(&configuration.oscillator_d, 0, sizeof(configuration.oscillator_d));
+  memset(&configuration.oscillator_e, 0, sizeof(configuration.oscillator_e));
+  memset(&configuration.oscillator_f, 0, sizeof(configuration.oscillator_f));
+  memset(&configuration.oscillator_g, 0, sizeof(configuration.oscillator_g));
 
-  const size_t synth_sample_size = sample_rate * 4ul; // 8 seconds
 
-  if (synth_output.generate_synth(synth_sample_size, 0.5, configuration)) {
+  constexpr size_t seconds = 3ul;
+
+  const size_t synth_sample_size = sample_rate * seconds;
+
+  if (synth_output.generate_synth(synth_sample_size, 0.22, configuration)) {
     synth_output.save("synth_output.wav");
   } else {
     std::cout

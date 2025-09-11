@@ -30,7 +30,7 @@ constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
 constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
-constexpr auto MAX_OSC_SUPPORT = 4; // Change this if we are going to support
+constexpr auto MAX_OSC_SUPPORT = 7; // Change this if we are going to support
                                     // more or less (but hopefully more)
 
 enum wave_type_t : uint8_t {
@@ -201,7 +201,10 @@ public:
     oscillator_a = 1,
     oscillator_b = 2,
     oscillator_c = 3,
-    oscillator_d = 4
+    oscillator_d = 4,
+    oscillator_e = 5,
+    oscillator_f = 6,
+    oscillator_g = 7
   };
   enum oscillator_type_t : uint8_t { empty = 0, carrier = 1, modulation = 2 };
   struct oscillator_config_t {
@@ -218,11 +221,17 @@ public:
     oscillator_config_t oscillator_b;
     oscillator_config_t oscillator_c;
     oscillator_config_t oscillator_d;
+    oscillator_config_t oscillator_e;
+    oscillator_config_t oscillator_f;
+    oscillator_config_t oscillator_g;
     bool empty(void) const {
       return oscillator_a.operator_type == oscillator_type_t::empty &&
              oscillator_b.operator_type == oscillator_type_t::empty &&
              oscillator_c.operator_type == oscillator_type_t::empty &&
-             oscillator_d.operator_type == oscillator_type_t::empty;
+             oscillator_d.operator_type == oscillator_type_t::empty &&
+             oscillator_e.operator_type == oscillator_type_t::empty &&
+             oscillator_f.operator_type == oscillator_type_t::empty &&
+             oscillator_g.operator_type == oscillator_type_t::empty;
     }
   };
 
@@ -438,6 +447,18 @@ public:
                 selected_osc = &configuration.oscillator_d;
                 break;
               }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
+                break;
+              }
               default: {
                 selected_osc = nullptr;
                 break;
@@ -531,7 +552,7 @@ public:
               oscillator_config_t *selected_osc = nullptr;
               switch (osc_index) {
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
-                selected_osc = &configuration.oscillator_b;
+                selected_osc = &configuration.oscillator_a;
                 break;
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_c): {
@@ -540,6 +561,18 @@ public:
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
                 selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
                 break;
               }
               default: {
@@ -640,11 +673,23 @@ public:
                 break;
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
-                selected_osc = &configuration.oscillator_c;
+                selected_osc = &configuration.oscillator_a;
                 break;
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
                 selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
                 break;
               }
               default: {
@@ -750,14 +795,376 @@ public:
                 break;
               }
               case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
-                selected_osc = &configuration.oscillator_d;
+                selected_osc = &configuration.oscillator_a;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
                 break;
               }
               default: {
                 selected_osc = nullptr;
                 break;
               }
+              }
 
+              if (nullptr == selected_osc) {
+                continue;
+              }
+
+              if (selected_osc->osc_to_modulate !=
+                  oscillator_selection_t::oscillator_d) {
+                continue;
+              }
+
+              modulation_amplitude += selected_osc->modulation_amplitude;
+              const double modulating_frequency = selected_osc->frequency;
+
+              if ((selected_osc->wave_type & wave_type_t::sine)) {
+                frequency_offset +=
+                    helper::pcm_sine(modulating_frequency, time, volume, phase);
+              }
+              if ((selected_osc->wave_type & wave_type_t::triangle)) {
+                frequency_offset +=
+                    helper::pcm_triangle(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::square)) {
+                frequency_offset +=
+                    helper::pcm_square(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
+                frequency_offset +=
+                    helper::pcm_saw_tooth(time, volume, modulating_frequency);
+              }
+            }
+
+            if (modulation_amplitude <= 0.0) {
+              modulation_amplitude = 1.0;
+            }
+
+            frequency_offset /= volume;
+            frequency_offset *= modulation_amplitude;
+
+            const auto wave_type =
+                static_cast<uint8_t>(configuration.oscillator_d.wave_type);
+
+            if ((wave_type & wave_type_t::sine)) {
+              sample += helper::pcm_sine(configuration.oscillator_d.frequency +
+                                             frequency_offset,
+                                         time, volume, phase);
+            }
+            if ((wave_type & wave_type_t::triangle)) {
+              sample += helper::pcm_triangle(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::square)) {
+              sample += helper::pcm_square(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::sawtooth)) {
+              sample += helper::pcm_saw_tooth(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+
+            time += (1.0 / static_cast<double>(sample_rate));
+            samples.push_back(sample);
+          }
+          return samples;
+        });
+
+    auto osc_e_carrier_future =
+        std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
+                                        sample_rate, &configuration](void) {
+          std::vector<uint32_t> samples;
+          if (configuration.oscillator_e.operator_type ==
+              oscillator_type_t::modulation) {
+            return samples;
+          }
+          samples.reserve(sample_size);
+          double phase{};
+          double time{};
+          for (size_t _{}; _ < sample_size; _++) {
+            uint32_t sample{};
+            double frequency_offset = 0.0;
+            double modulation_amplitude{};
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
+                 osc_index++) {
+
+              oscillator_config_t *selected_osc = nullptr;
+              switch (osc_index) {
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_b): {
+                selected_osc = &configuration.oscillator_b;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_c): {
+                selected_osc = &configuration.oscillator_c;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
+                selected_osc = &configuration.oscillator_a;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
+                selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
+                break;
+              }
+              }
+
+              if (nullptr == selected_osc) {
+                continue;
+              }
+
+              if (selected_osc->osc_to_modulate !=
+                  oscillator_selection_t::oscillator_d) {
+                continue;
+              }
+
+              modulation_amplitude += selected_osc->modulation_amplitude;
+              const double modulating_frequency = selected_osc->frequency;
+
+              if ((selected_osc->wave_type & wave_type_t::sine)) {
+                frequency_offset +=
+                    helper::pcm_sine(modulating_frequency, time, volume, phase);
+              }
+              if ((selected_osc->wave_type & wave_type_t::triangle)) {
+                frequency_offset +=
+                    helper::pcm_triangle(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::square)) {
+                frequency_offset +=
+                    helper::pcm_square(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
+                frequency_offset +=
+                    helper::pcm_saw_tooth(time, volume, modulating_frequency);
+              }
+            }
+
+            if (modulation_amplitude <= 0.0) {
+              modulation_amplitude = 1.0;
+            }
+
+            frequency_offset /= volume;
+            frequency_offset *= modulation_amplitude;
+
+            const auto wave_type =
+                static_cast<uint8_t>(configuration.oscillator_d.wave_type);
+
+            if ((wave_type & wave_type_t::sine)) {
+              sample += helper::pcm_sine(configuration.oscillator_d.frequency +
+                                             frequency_offset,
+                                         time, volume, phase);
+            }
+            if ((wave_type & wave_type_t::triangle)) {
+              sample += helper::pcm_triangle(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::square)) {
+              sample += helper::pcm_square(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::sawtooth)) {
+              sample += helper::pcm_saw_tooth(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+
+            time += (1.0 / static_cast<double>(sample_rate));
+            samples.push_back(sample);
+          }
+          return samples;
+        });
+
+    auto osc_f_carrier_future =
+        std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
+                                        sample_rate, &configuration](void) {
+          std::vector<uint32_t> samples;
+          if (configuration.oscillator_e.operator_type ==
+              oscillator_type_t::modulation) {
+            return samples;
+          }
+          samples.reserve(sample_size);
+          double phase{};
+          double time{};
+          for (size_t _{}; _ < sample_size; _++) {
+            uint32_t sample{};
+            double frequency_offset = 0.0;
+            double modulation_amplitude{};
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
+                 osc_index++) {
+
+              oscillator_config_t *selected_osc = nullptr;
+              switch (osc_index) {
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_b): {
+                selected_osc = &configuration.oscillator_b;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_c): {
+                selected_osc = &configuration.oscillator_c;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
+                selected_osc = &configuration.oscillator_a;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
+                selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_g): {
+                selected_osc = &configuration.oscillator_g;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
+                break;
+              }
+              }
+
+              if (nullptr == selected_osc) {
+                continue;
+              }
+
+              if (selected_osc->osc_to_modulate !=
+                  oscillator_selection_t::oscillator_d) {
+                continue;
+              }
+
+              modulation_amplitude += selected_osc->modulation_amplitude;
+              const double modulating_frequency = selected_osc->frequency;
+
+              if ((selected_osc->wave_type & wave_type_t::sine)) {
+                frequency_offset +=
+                    helper::pcm_sine(modulating_frequency, time, volume, phase);
+              }
+              if ((selected_osc->wave_type & wave_type_t::triangle)) {
+                frequency_offset +=
+                    helper::pcm_triangle(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::square)) {
+                frequency_offset +=
+                    helper::pcm_square(time, volume, modulating_frequency);
+              }
+              if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
+                frequency_offset +=
+                    helper::pcm_saw_tooth(time, volume, modulating_frequency);
+              }
+            }
+
+            if (modulation_amplitude <= 0.0) {
+              modulation_amplitude = 1.0;
+            }
+
+            frequency_offset /= volume;
+            frequency_offset *= modulation_amplitude;
+
+            const auto wave_type =
+                static_cast<uint8_t>(configuration.oscillator_d.wave_type);
+
+            if ((wave_type & wave_type_t::sine)) {
+              sample += helper::pcm_sine(configuration.oscillator_d.frequency +
+                                             frequency_offset,
+                                         time, volume, phase);
+            }
+            if ((wave_type & wave_type_t::triangle)) {
+              sample += helper::pcm_triangle(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::square)) {
+              sample += helper::pcm_square(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+            if ((wave_type & wave_type_t::sawtooth)) {
+              sample += helper::pcm_saw_tooth(
+                  time, volume,
+                  configuration.oscillator_d.frequency + frequency_offset);
+            }
+
+            time += (1.0 / static_cast<double>(sample_rate));
+            samples.push_back(sample);
+          }
+          return samples;
+        });
+
+    auto osc_g_carrier_future =
+        std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
+                                        sample_rate, &configuration](void) {
+          std::vector<uint32_t> samples;
+          if (configuration.oscillator_e.operator_type ==
+              oscillator_type_t::modulation) {
+            return samples;
+          }
+          samples.reserve(sample_size);
+          double phase{};
+          double time{};
+          for (size_t _{}; _ < sample_size; _++) {
+            uint32_t sample{};
+            double frequency_offset = 0.0;
+            double modulation_amplitude{};
+            for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
+                 osc_index++) {
+
+              oscillator_config_t *selected_osc = nullptr;
+              switch (osc_index) {
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_b): {
+                selected_osc = &configuration.oscillator_b;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_c): {
+                selected_osc = &configuration.oscillator_c;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_a): {
+                selected_osc = &configuration.oscillator_a;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_d): {
+                selected_osc = &configuration.oscillator_d;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_e): {
+                selected_osc = &configuration.oscillator_e;
+                break;
+              }
+              case static_cast<uint8_t>(oscillator_selection_t::oscillator_f): {
+                selected_osc = &configuration.oscillator_f;
+                break;
+              }
+              default: {
+                selected_osc = nullptr;
+                break;
+              }
               }
 
               if (nullptr == selected_osc) {
@@ -831,6 +1238,9 @@ public:
     auto wave_b = osc_b_carrier_future.get();
     auto wave_c = osc_c_carrier_future.get();
     auto wave_d = osc_d_carrier_future.get();
+    auto wave_e = osc_e_carrier_future.get();
+    auto wave_f = osc_f_carrier_future.get();
+    auto wave_g = osc_g_carrier_future.get();
 
     for (size_t index{}; index < sample_size; index++) {
       uint32_t sample{};
@@ -847,6 +1257,15 @@ public:
       }
       if (index < wave_d.size()) {
         sample += wave_d[index];
+      }
+      if (index < wave_e.size()) {
+        sample += wave_e[index];
+      }
+      if (index < wave_f.size()) {
+        sample += wave_f[index];
+      }
+      if (index < wave_g.size()) {
+        sample += wave_g[index];
       }
 
       switch (m_header.bits_per_sample) {
