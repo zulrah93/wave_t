@@ -112,6 +112,9 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
 
 ```
 
+<img width="2462" height="201" alt="image" src="https://github.com/user-attachments/assets/42e5af5b-9645-4d87-aaa2-4ce2b154f0c6" />
+
+
 # Supports
 
 DFT and IDFT for pitch detection or FM synthesis, it also supports calculating the DFT/IDFT async. This could be more optimized.
