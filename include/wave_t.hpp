@@ -1279,7 +1279,7 @@ public:
         break;
       case _24_BITS_PER_SAMPLE:
         !is_stereo ? add_24_bits_sample(sample)
-                   : add_16_bits_sample(sample, sample);
+                   : add_24_bits_sample(sample, sample);
         break;
       default:
         break;
@@ -1338,7 +1338,7 @@ public:
         break;
       case _24_BITS_PER_SAMPLE:
         !is_stereo ? add_24_bits_sample(sample)
-                   : add_16_bits_sample(sample, sample);
+                   : add_24_bits_sample(sample, sample);
         break;
       default:
         return false;
@@ -1422,6 +1422,22 @@ public:
 #endif
 
 private:
+
+  struct int24_t {
+      int8_t byte1;
+      int8_t byte2;
+      int8_t byte3;
+  };
+
+  static constexpr int24_t make_int24_t(const int32_t& value) {
+        int24_t _24_bit_value{};
+        //Grab the 3 bytes within the 32-bit signed value
+        _24_bit_value.byte1 = static_cast<int8_t>(value & 0xff);
+        _24_bit_value.byte2 = static_cast<int8_t>((value & 0xff00) >> 0xff);
+        _24_bit_value.byte3 = static_cast<int8_t>((value & 0xff0000) >> 0xffff);
+        return _24_bit_value;
+  }
+
   bool save_as_8_bits(const std::string &file_path) {
     std::vector<int8_t> samples;
     samples.reserve(m_samples.size());
@@ -1446,7 +1462,7 @@ private:
 
   bool save_as_16_bits(const std::string &file_path) {
     std::vector<int16_t> samples;
-    samples.reserve(m_samples.size());
+    samples.reserve(sizeof(int16_t) * m_samples.size());
     for (auto &sample : m_samples) {
       samples.push_back(static_cast<int16_t>(sample));
     }
@@ -1467,7 +1483,34 @@ private:
     return written_bytes == expected_bytes;
   }
 
-  bool save_as_24_bits(const std::string &file_path) { return false; }
+  bool save_as_24_bits(const std::string &file_path) { 
+    constexpr const size_t bytes{3};
+    std::vector<int8_t> samples;
+    samples.reserve(bytes * m_samples.size());
+    
+    for (auto &sample : m_samples) {
+       const int24_t value = make_int24_t(sample);
+       samples.push_back(value.byte1);
+       samples.push_back(value.byte2);
+       samples.push_back(value.byte3);
+    }
+
+    auto wav_file_handle = fopen(file_path.c_str(), "wb");
+    if (nullptr == wav_file_handle) {
+      return false;
+    }
+    
+    const size_t expected_bytes =
+        sizeof(m_header) + (bytes * samples.size());
+    size_t written_bytes =
+        fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
+               sizeof(m_header), wav_file_handle);
+    written_bytes += fwrite(samples.data(), sizeof(int8_t), samples.size(),
+                            wav_file_handle);
+    fclose(wav_file_handle);
+    return written_bytes == expected_bytes;
+
+  }
   wave_header_t m_header;
   std::vector<int32_t> m_samples;
 };
