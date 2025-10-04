@@ -47,7 +47,7 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
   wave_file_t synth_output;
   synth_output.set_sample_rate(sample_rate);
   synth_output.set_number_of_channels(1);
-  synth_output.set_bits_per_sample(16);
+  synth_output.set_bits_per_sample(24);
 
   wave_file_t::synth_config_t configuration;
 
