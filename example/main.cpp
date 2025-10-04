@@ -55,7 +55,7 @@ int main(int arguments_size, char **arguments) {
   output24.set_bits_per_sample(24);
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
-  output24.generate_wave(wave_type_t::sine, sample_size, C4_FREQUENCY, 0.6);
+  output24.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.7);
   if (!output24.save("output_24.wav")) {
      std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }

@@ -473,7 +473,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -589,7 +589,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -707,7 +707,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -824,7 +824,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -941,7 +941,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -1058,7 +1058,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -1175,7 +1175,7 @@ public:
           double phase{};
           double time{};
           for (size_t _{}; _ < sample_size; _++) {
-            uint32_t sample{};
+            int32_t sample{};
             double frequency_offset = 0.0;
             double modulation_amplitude{};
             for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT;
@@ -1289,7 +1289,7 @@ public:
     auto wave_g = osc_g_carrier_future.get();
 
     for (size_t index{}; index < sample_size; index++) {
-      uint32_t sample{};
+      int32_t sample{};
       double frequency_offset = 0.0;
 
       if (index < wave_a.size()) {
@@ -1377,7 +1377,7 @@ public:
         helper::set_volume(volume_percent / static_cast<double>(wave_count), max_sample_value);
 
     for (size_t _ = 0ul; _ < sample_size; _++) {
-      int16_t sample{};
+      int32_t sample{};
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(frequency, time, volume, phase);
       }
@@ -1496,8 +1496,8 @@ private:
         int24_t _24_bit_value{};
         //Grab the 3 bytes within the 32-bit signed value
         _24_bit_value.byte1 = static_cast<int8_t>(value & 0xff);
-        _24_bit_value.byte2 = static_cast<int8_t>((value & 0xff00) >> 0xff);
-        _24_bit_value.byte3 = static_cast<int8_t>((value & 0xff0000) >> 0xffff);
+        _24_bit_value.byte2 = static_cast<int8_t>((value & 0xff00) >> 8);
+        _24_bit_value.byte3 = static_cast<int8_t>((value & 0xff0000) >> 16);
         return _24_bit_value;
   }
 
