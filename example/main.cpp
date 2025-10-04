@@ -4,6 +4,7 @@
 #include <wave_t.hpp>
 
 constexpr double C4_FREQUENCY = 261.626;
+constexpr double A4_FREQUENCY = 440.000;
 
 double detune(double x) {
 
@@ -42,18 +43,22 @@ int main(int arguments_size, char **arguments) {
   const size_t sample_size = 44100 * 60 * 5; // 5 minutes of 16-bit PCM sample
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
-  output.generate_wave(wave_type_t::sine, sample_size, C4_FREQUENCY, 0.6);
-  output.save("output.wav");
+  output.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.6);
+  if (!output.save("output.wav")) {
+   std::cout << "Failed to save 16-bit generated wav file" << std::endl;
+  }
 
   //Try out 24-bit audio!
-  /*wave_file_t output24;
+  wave_file_t output24;
   output24.set_sample_rate(sample_rate);
   output24.set_number_of_channels(1);
   output24.set_bits_per_sample(24);
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
   output24.generate_wave(wave_type_t::sine, sample_size, C4_FREQUENCY, 0.6);
-  output24.save("output.wav");*/
+  if (!output24.save("output_24.wav")) {
+     std::cout << "Failed to save 24-bit generated wav file" << std::endl;
+  }
 
   //Read output.wav from our earlier example
   wave_file_t input("output.wav");

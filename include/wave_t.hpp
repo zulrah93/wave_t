@@ -2,6 +2,7 @@
 #define WAVE_T_HPP
 
 #include <bit>
+#include <climits>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -28,6 +29,7 @@ constexpr auto PCM = 1;
 constexpr auto _8_BITS_PER_SAMPLE = 8;
 constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
+constexpr auto INT24_MAX = 8388607;
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
 constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 constexpr auto MAX_OSC_SUPPORT = 7; // Change this if we are going to support
@@ -44,14 +46,14 @@ enum wave_type_t : uint8_t {
 // Provides functions that generate signals and dft and invesre dft function
 namespace helper {
 
-constexpr double set_volume(double percent) {
+constexpr double set_volume(double percent, size_t max_sample_value) {
   if (percent > 1.0) {
     percent = 1.0;
   }
   if (percent < 0.0) {
     percent = 0.0;
   }
-  return static_cast<double>(INT16_MAX - 1) * percent;
+  return static_cast<double>(max_sample_value - 1) * percent;
 }
 
 // Source: https://en.wikipedia.org/wiki/Sign_function
@@ -66,33 +68,33 @@ constexpr double sign(double x) {
 }
 
 // Source: https://en.wikipedia.org/wiki/Sine_wave
-constexpr int16_t pcm_sine(double frequency, double time, double amplititude,
+constexpr int32_t pcm_sine(double frequency, double time, double amplititude,
                            double phase) {
-  return static_cast<int16_t>(
+  return static_cast<int32_t>(
       amplititude * sin((2.0 * std::numbers::pi * frequency * time) + phase));
 }
 
 // Source: https://en.wikipedia.org/wiki/Triangle_wave
-constexpr int16_t pcm_triangle(double time, double amplititude,
+constexpr int32_t pcm_triangle(double time, double amplititude,
                                double frequency) {
   const double period = (1.0 / frequency);
-  return static_cast<int16_t>(
+  return static_cast<int32_t>(
       fabs(((2.0 * amplititude) / std::numbers::pi) *
            asin(sin(2.0 * time * (std::numbers::pi / period)))));
 };
 
 // Source: https://en.wikipedia.org/wiki/Square_wave_(waveform)
-constexpr int16_t pcm_square(double time, double amplititude,
+constexpr int32_t pcm_square(double time, double amplititude,
                              double frequency) {
   return static_cast<int16_t>(
       amplititude * sign(sin(2 * std::numbers::pi * frequency * time)));
 }
 
 // Source: https://en.wikipedia.org/wiki/Sawtooth_wave
-constexpr int16_t pcm_saw_tooth(double time, double amplititude,
+constexpr int32_t pcm_saw_tooth(double time, double amplititude,
                                 double frequency) {
   const double period = (1.0 / frequency);
-  return static_cast<int16_t>(2.0 * amplititude *
+  return static_cast<int32_t>(2.0 * amplititude *
                               ((time / period) - floor(0.5 + (time / period))));
 }
 
@@ -285,7 +287,7 @@ public:
               fread(samples, sizeof(int8_t), sample_size, wave_file_handle);
           if (bytes_read == sample_size) {
             for (size_t index = 0; index < sample_size; index++) {
-              m_samples.push_back(static_cast<uint32_t>(samples[index]));
+              m_samples.push_back(static_cast<int32_t>(samples[index]));
             }
           }
           delete[] samples;
@@ -297,7 +299,7 @@ public:
               fread(samples, sizeof(int16_t), sample_size, wave_file_handle);
           if (bytes_read <= (m_header.block_align * sample_size)) {
             for (size_t index = 0; index < sample_size; index++) {
-              m_samples.push_back(static_cast<uint32_t>(samples[index]));
+              m_samples.push_back(static_cast<int32_t>(samples[index]));
             }
           }
           delete[] samples;
@@ -323,9 +325,9 @@ public:
            (m_header.sub_chunk_2_size > 0);
   }
 
-  std::optional<uint32_t> operator[](size_t index) const {
+  std::optional<int32_t> operator[](size_t index) const {
     if (index < m_samples.size()) {
-      return std::make_optional<uint32_t>(m_samples[index]);
+      return std::make_optional<int32_t>(m_samples[index]);
     }
     return std::nullopt;
   }
@@ -405,20 +407,37 @@ public:
       return false;
     }
 
-    const double volume = helper::set_volume(volume_percent);
+    size_t max_sample_value = 1;
+
+    switch (m_header.bits_per_sample) {
+      case _8_BITS_PER_SAMPLE:
+        max_sample_value = CHAR_MAX;
+        break;
+      case _16_BITS_PER_SAMPLE:
+        max_sample_value = INT16_MAX;        
+        break;
+      case _24_BITS_PER_SAMPLE:
+        max_sample_value = INT24_MAX;
+        break;
+      default:
+        max_sample_value = 1; // We don't support 32-bit yet but we could nothing stopping it since the wav spec supports it
+        break;
+    }
+
+    const double volume = helper::set_volume(volume_percent, max_sample_value);
 
     const bool is_stereo = m_header.number_of_channels == 2;
 
     const uint32_t sample_rate = m_header.sample_rate;
 
-    std::vector<uint32_t> output;
+    std::vector<int32_t> output;
     output.reserve(sample_size);
 
     auto osc_a_carrier_future = std::async(
         std::launch::async,
         [&sample_size, &volume, &is_stereo, sample_rate,
          &configuration](void) { // TODO: Replace this lambda with a function
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_a.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -534,7 +553,7 @@ public:
     auto osc_b_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_b.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -652,7 +671,7 @@ public:
     auto osc_c_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_c.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -769,7 +788,7 @@ public:
     auto osc_d_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_d.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -886,7 +905,7 @@ public:
     auto osc_e_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_e.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -1003,7 +1022,7 @@ public:
     auto osc_f_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_e.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -1120,7 +1139,7 @@ public:
     auto osc_g_carrier_future =
         std::async(std::launch::async, [&sample_size, &volume, &is_stereo,
                                         sample_rate, &configuration](void) {
-          std::vector<uint32_t> samples;
+          std::vector<int32_t> samples;
           if (configuration.oscillator_e.operator_type ==
               oscillator_type_t::modulation) {
             return samples;
@@ -1310,8 +1329,25 @@ public:
         static_cast<size_t>((wave_type & wave_type_t::sawtooth) ==
                             (wave_type_t::sawtooth));
 
+    size_t max_sample_value = 1;
+
+    switch (m_header.bits_per_sample) {
+      case _8_BITS_PER_SAMPLE:
+        max_sample_value = CHAR_MAX;
+        break;
+      case _16_BITS_PER_SAMPLE:
+        max_sample_value = INT16_MAX;        
+        break;
+      case _24_BITS_PER_SAMPLE:
+        max_sample_value = INT24_MAX;
+        break;
+      default:
+        max_sample_value = 1; // We don't support 32-bit yet but we could nothing stopping it since the wav spec supports it
+        break;
+    }
+
     const double volume =
-        helper::set_volume(volume_percent / static_cast<double>(wave_count));
+        helper::set_volume(volume_percent / static_cast<double>(wave_count), max_sample_value);
 
     for (size_t _ = 0ul; _ < sample_size; _++) {
       int16_t sample{};
@@ -1456,7 +1492,9 @@ private:
                sizeof(m_header), wav_file_handle);
     written_bytes +=
         fwrite(samples.data(), sizeof(int8_t), samples.size(), wav_file_handle);
+    
     fclose(wav_file_handle);
+    
     return written_bytes == expected_bytes;
   }
 
@@ -1477,8 +1515,8 @@ private:
     size_t written_bytes =
         fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
                sizeof(m_header), wav_file_handle);
-    written_bytes += fwrite(samples.data(), sizeof(int16_t), samples.size(),
-                            wav_file_handle);
+    written_bytes += (fwrite(samples.data(), sizeof(int16_t), samples.size(),
+                            wav_file_handle) * sizeof(int16_t));
     fclose(wav_file_handle);
     return written_bytes == expected_bytes;
   }
@@ -1501,7 +1539,7 @@ private:
     }
     
     const size_t expected_bytes =
-        sizeof(m_header) + (bytes * samples.size());
+        sizeof(m_header) + samples.size();
     size_t written_bytes =
         fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
                sizeof(m_header), wav_file_handle);
