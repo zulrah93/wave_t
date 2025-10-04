@@ -1,28 +1,28 @@
-/*
-
-MIT License
-
-Copyright (c) 2025 Daniel Lopez
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-*/
+//
+//
+//MIT License
+//
+//Copyright (c) 2025 Daniel Lopez
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files (the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all
+//copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//SOFTWARE.
+//
+//
 
 
 #ifndef WAVE_T_HPP
@@ -57,6 +57,7 @@ constexpr auto _8_BITS_PER_SAMPLE = 8;
 constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
 constexpr auto INT24_MAX = 8388607;
+constexpr auto BITS_PER_BYTE = 8;
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
 constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
 constexpr auto MAX_OSC_SUPPORT = 7; // Change this if we are going to support
@@ -310,7 +311,7 @@ public:
         switch (m_header.bits_per_sample) {
         case _8_BITS_PER_SAMPLE: {
           int8_t *samples = new int8_t[sample_size];
-          bytes_read =
+          bytes_read +=
               fread(samples, sizeof(int8_t), sample_size, wave_file_handle);
           if (bytes_read == sample_size) {
             for (size_t index = 0; index < sample_size; index++) {
@@ -322,7 +323,7 @@ public:
         }
         case _16_BITS_PER_SAMPLE: {
           int16_t *samples = new int16_t[sample_size];
-          bytes_read =
+          bytes_read +=
               fread(samples, sizeof(int16_t), sample_size, wave_file_handle);
           if (bytes_read <= (m_header.block_align * sample_size)) {
             for (size_t index = 0; index < sample_size; index++) {
@@ -332,8 +333,31 @@ public:
           delete[] samples;
           break;
         }
-        case _24_BITS_PER_SAMPLE:
+        case _24_BITS_PER_SAMPLE: {
+          const size_t bytes_size = m_header.sub_chunk_2_size;
+          uint8_t* bytes = new uint8_t[bytes_size]; // Since 24-bit fixed width integers don't exist -- we need to read all bytes and construct the 24-bit signed integer into a 32-bit signed integer 
+          bytes_read +=
+              fread(bytes, sizeof(uint8_t), m_header.sub_chunk_2_size, wave_file_handle);
+          int8_t count = 0;
+          int32_t constructed_24_bit_sample{};
+          for(size_t index = 0; index < bytes_size; index++ ) {
+              if (count == 0) {
+                constructed_24_bit_sample |= bytes[index];
+                
+              }
+              else {
+                constructed_24_bit_sample |= bytes[index] << ((BITS_PER_BYTE * count));
+              }
+              if (count == 2) {
+                  count = 0;
+                  m_samples.push_back(std::byteswap(constructed_24_bit_sample));
+                  constructed_24_bit_sample = 0;
+                  continue;
+              }
+              count += 1;
+          }
           break;
+        }
         default:
           break;
         }
@@ -1415,11 +1439,11 @@ public:
   bool save(const std::string &file_path) {
     m_header.sub_chunk_2_size =
         (m_samples.size() * m_header.number_of_channels *
-         (m_header.bits_per_sample / 8));
+         (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.block_align =
-        (m_header.number_of_channels * (m_header.bits_per_sample / 8));
+        (m_header.number_of_channels * (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.byte_rate = (m_header.sample_rate * m_header.number_of_channels *
-                          (m_header.bits_per_sample / 8));
+                          (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.chunk_size = 36 + m_header.sub_chunk_2_size;
     switch (m_header.bits_per_sample) {
     case _8_BITS_PER_SAMPLE: {
@@ -1496,8 +1520,8 @@ private:
         int24_t _24_bit_value{};
         //Grab the 3 bytes within the 32-bit signed value
         _24_bit_value.byte1 = static_cast<int8_t>(value & 0xff);
-        _24_bit_value.byte2 = static_cast<int8_t>((value & 0xff00) >> 8);
-        _24_bit_value.byte3 = static_cast<int8_t>((value & 0xff0000) >> 16);
+        _24_bit_value.byte2 = static_cast<int8_t>((value & 0xff00) >> BITS_PER_BYTE);
+        _24_bit_value.byte3 = static_cast<int8_t>((value & 0xff0000) >> (BITS_PER_BYTE * 2));
         return _24_bit_value;
   }
 
