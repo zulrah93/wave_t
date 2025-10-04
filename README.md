@@ -28,6 +28,8 @@ int main(int arguments_size, char** arguments) {
 }
 ```
 
+<img width="2268" height="190" alt="image" src="https://github.com/user-attachments/assets/293356ba-3ebd-47be-b062-50411e6b18f8" />
+
 ```
 #include <cstdint>
 #include <wave_t.hpp>
@@ -109,8 +111,6 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
 }
 
 ```
-
-<img width="2268" height="190" alt="image" src="https://github.com/user-attachments/assets/293356ba-3ebd-47be-b062-50411e6b18f8" />
 
 # Supports
 
