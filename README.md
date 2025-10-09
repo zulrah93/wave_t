@@ -55,46 +55,46 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
   
   constexpr double detune_amount = 0.00;
 
-  configuration.oscillator_a.operator_type = wave_file_t::carrier;
+  configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency = C4_FREQUENCY * (1.0 - (0.88997686 * detune(detune_amount)));
   configuration.oscillator_a.osc_to_modulate =
-      wave_file_t::oscillator_selection_t::none_selected;
+      oscillator_selection_t::none_selected;
 
-  configuration.oscillator_b.operator_type = wave_file_t::carrier;
+  configuration.oscillator_b.operator_type = carrier;
   configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_b.frequency = C4_FREQUENCY * (1.0 - (0.93711560 * detune(detune_amount)));
-  configuration.oscillator_b.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
+  configuration.oscillator_b.osc_to_modulate = oscillator_selection_t::none_selected;
 
-  configuration.oscillator_c.operator_type = wave_file_t::carrier;
+  configuration.oscillator_c.operator_type = carrier;
   configuration.oscillator_c.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_c.frequency = C4_FREQUENCY * (1.0 - (0.98047643 * detune(detune_amount)));
   configuration.oscillator_c.osc_to_modulate =
-      wave_file_t::oscillator_selection_t::none_selected;
+      oscillator_selection_t::none_selected;
 
 
-  configuration.oscillator_d.operator_type = wave_file_t::carrier;
+  configuration.oscillator_d.operator_type = carrier;
   configuration.oscillator_d.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_d.frequency = C4_FREQUENCY;
-  configuration.oscillator_d.osc_to_modulate = wave_file_t::oscillator_selection_t::none_selected;
+  configuration.oscillator_d.osc_to_modulate = oscillator_selection_t::none_selected;
 
-   configuration.oscillator_e.operator_type = wave_file_t::carrier;
+   configuration.oscillator_e.operator_type = carrier;
   configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_e.frequency = C4_FREQUENCY * (1.0 - (1.01991221 * detune(detune_amount)));
   configuration.oscillator_e.osc_to_modulate =
-      wave_file_t::oscillator_selection_t::none_selected;
- 
-  configuration.oscillator_f.operator_type = wave_file_t::carrier;
+      oscillator_selection_t::none_selected;
+
+  configuration.oscillator_f.operator_type = carrier;
   configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_f.frequency = C4_FREQUENCY * (1.0 - (1.06216538 * detune(detune_amount)));
   configuration.oscillator_f.osc_to_modulate =
-      wave_file_t::oscillator_selection_t::none_selected;
+      oscillator_selection_t::none_selected;
 
-  configuration.oscillator_g.operator_type = wave_file_t::carrier;
+  configuration.oscillator_g.operator_type = carrier;
   configuration.oscillator_g.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_g.frequency = C4_FREQUENCY * (1.0 - (1.10745242 * detune(detune_amount)));
   configuration.oscillator_g.osc_to_modulate =
-      wave_file_t::oscillator_selection_t::none_selected;
+      oscillator_selection_t::none_selected;
 
 
   constexpr size_t seconds = 3ul;
@@ -108,6 +108,12 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
         << "Invalid synth configuration or failed to generate synth -- sorry."
         << std::endl;
   }
+
+  std::cout
+      << "Demo finished!! If you don't see this message assume process crashed!"
+      << std::endl;
+
+  return 0;
 }
 
 ```
