@@ -24,6 +24,8 @@
 //
 //
 
+#if __cplusplus >= 202302L // Sorry this uses c++-23 features
+
 #ifndef WAVE_T_HPP
 #define WAVE_T_HPP
 
@@ -46,6 +48,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+using namespace std::literals::complex_literals;
 
 constexpr auto RIFF_ASCII = std::byteswap(0x52494646);
 constexpr auto WAVE_ASCII = std::byteswap(0x57415645);
@@ -1687,5 +1691,7 @@ namespace processing_functions {
     return samples;
     }
 } // namespace processing_functions
+
+#endif
 
 #endif

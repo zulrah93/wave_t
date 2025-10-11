@@ -34,6 +34,7 @@ double detune(double x) {
  */
 
 int main(int arguments_size, char **arguments) {
+
   std::cout << "wave_t.hpp usage example!" << std::endl;
   wave_file_t output;
   const size_t sample_rate = 44100;
@@ -55,7 +56,7 @@ int main(int arguments_size, char **arguments) {
   output24.set_bits_per_sample(24);
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
-  output24.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.7);
+  output24.generate_wave(wave_type_t::sine, sample_size, C4_FREQUENCY, 0.6);
   if (!output24.save("output_24.wav")) {
      std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }
@@ -66,6 +67,7 @@ int main(int arguments_size, char **arguments) {
   if (!input) {
     std::cout << "Failed to load output.wav it has invalid wav header!!"
               << std::endl;
+    std::cout << "DEBUG: " << std::endl << input.get_readable_wave_header();
     return 1;
   }
 
@@ -74,7 +76,7 @@ int main(int arguments_size, char **arguments) {
 
   const size_t dft_sample_size = sample_rate / 2;
   const bool async =
-      true; // DFT can be calculated asynchronously may help performance
+    true; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
@@ -116,7 +118,7 @@ int main(int arguments_size, char **arguments) {
 
   // Supersaw example -- hopefully :P
 
-  constexpr double detune_amount = 0.00;
+  constexpr double detune_amount = 0.0;
 
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
@@ -160,9 +162,9 @@ int main(int arguments_size, char **arguments) {
       oscillator_selection_t::none_selected;
 
 
-  constexpr size_t seconds = 3ul;
+  constexpr double seconds = 1.25;
 
-  const size_t synth_sample_size = sample_rate * seconds;
+  const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
     synth_output.save("synth_output.wav");
@@ -177,4 +179,5 @@ int main(int arguments_size, char **arguments) {
       << std::endl;
 
   return 0;
+
 }

@@ -1,4 +1,4 @@
-# C++ .WAV manipulation header only library
+# Modern C++ .WAV manipulation header only library (C++23)
 
 To use this header you can just wget like below or clone repo but you only need to depend on header.
 
