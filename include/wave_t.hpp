@@ -313,17 +313,6 @@ struct wave_header_t {
   uint32_t sub_chunk_2_size;
 };
 
-constexpr bool is_wave_header_valid(const wave_header_t &header) {
-  return header.chunk_id == RIFF_ASCII && header.format == WAVE_ASCII &&
-         header.sub_chunk_1_id == FMT_ASCII &&
-         header.sub_chunk_2_id == DATA_ASCII && (header.audio_format != 0) &&
-         (header.bits_per_sample > 0) && (header.number_of_channels > 0) &&
-         (header.sample_rate > 0) && (header.byte_rate > 0) &&
-         (header.chunk_size > 0) &&
-         (header.sub_chunk_1_size == DEFAULT_SUB_CHUNK_1_SIZE) &&
-         (header.sub_chunk_2_size > 0);
-}
-
 class wave_file_t {
 public:
   wave_file_t(void) {
@@ -366,18 +355,20 @@ public:
     auto wave_file_handle = fopen(wav_file_path.c_str(), "rb");
     if (wave_file_handle) {
       const size_t file_size =
-          std::filesystem::file_size(wav_file_path.c_str());
+          std::filesystem::file_size(std::filesystem::absolute(wav_file_path.c_str()));
       uint8_t *temp_buffer = new uint8_t[file_size];
-      memset(temp_buffer, '\0', sizeof(temp_buffer));
+      memset(temp_buffer, 0, sizeof(temp_buffer));
       size_t bytes_read =
           fread(temp_buffer, sizeof(uint8_t), file_size, wave_file_handle);
       if (bytes_read == file_size) {
-        wave_header_t *unchecked_header =
-            reinterpret_cast<wave_header_t *>(temp_buffer);
-        if (!is_wave_header_valid(*unchecked_header)) {
-          size_t index = EXTRA_PARAM_SIZE_OFFSET;
-          std::vector<uint8_t> no_junk_buffer(
-              temp_buffer, temp_buffer + EXTRA_PARAM_SIZE_OFFSET);
+        const wave_header_t* unchecked_header = reinterpret_cast<wave_header_t*>(temp_buffer);
+        if (!is_wave_header_valid(unchecked_header)) {
+          size_t index{};
+          std::vector<uint8_t> no_junk_buffer;
+          for (index; index < EXTRA_PARAM_SIZE_OFFSET; index++) {
+            no_junk_buffer.push_back(temp_buffer[index]);
+          }
+          no_junk_buffer.push_back(temp_buffer[EXTRA_PARAM_SIZE_OFFSET]);
           for (index; index < file_size; index++) {
             bool found = 0 == strncmp((char *)&temp_buffer[index], "data",
                                       strlen("data"));
@@ -388,7 +379,7 @@ public:
           for (index; index < file_size; index++) {
             no_junk_buffer.push_back(temp_buffer[index]);
           }
-          delete[] temp_buffer;
+          delete[] temp_buffer; // We are going to delete this to create a new buffer the next time we delete temp_buffer it will be different
           temp_buffer = new uint8_t[no_junk_buffer.size()];
           memcpy(temp_buffer, no_junk_buffer.data(),
                  sizeof(uint8_t) * no_junk_buffer.size());
@@ -406,16 +397,14 @@ public:
           for (size_t index = 0; index < sample_size; index++) {
             m_samples.push_back(static_cast<int32_t>(samples[index]));
           }
-          delete[] samples;
           break;
         }
         case _16_BITS_PER_SAMPLE: {
-          int16_t *samples =
+          const int16_t *samples =
               reinterpret_cast<int16_t *>(&temp_buffer[sizeof(wave_header_t)]);
           for (size_t index = 0; index < sample_size; index++) {
             m_samples.push_back(static_cast<int32_t>(samples[index]));
           }
-          delete[] samples;
           break;
         }
         case _24_BITS_PER_SAMPLE: {
@@ -426,7 +415,6 @@ public:
           for (size_t index = 0; index < bytes_size; index++) {
             if (count == 0) {
               constructed_24_bit_sample |= bytes[index];
-
             } else {
               constructed_24_bit_sample |= bytes[index]
                                            << ((BITS_PER_BYTE * count));
@@ -449,15 +437,19 @@ public:
     }
   }
 
+  static constexpr bool is_wave_header_valid(const wave_header_t *header) { // Helper function to validate a wav file header
+    return header->chunk_id == RIFF_ASCII && header->format == WAVE_ASCII &&
+           header->sub_chunk_1_id == FMT_ASCII &&
+           header->sub_chunk_2_id == DATA_ASCII && (header->audio_format != 0) &&
+           (header->bits_per_sample > 0) && (header->number_of_channels > 0) &&
+           (header->sample_rate > 0) && (header->byte_rate > 0) &&
+           (header->chunk_size > 0) &&
+           (header->sub_chunk_1_size == DEFAULT_SUB_CHUNK_1_SIZE) &&
+           (header->sub_chunk_2_size > 0);
+  }
+
   operator bool() {
-    return m_header.chunk_id == RIFF_ASCII && m_header.format == WAVE_ASCII &&
-           m_header.sub_chunk_1_id == FMT_ASCII &&
-           m_header.sub_chunk_2_id == DATA_ASCII &&
-           (m_header.audio_format != 0) && (m_header.bits_per_sample > 0) &&
-           (m_header.number_of_channels > 0) && (m_header.sample_rate > 0) &&
-           (m_header.byte_rate > 0) && (m_header.chunk_size > 0) &&
-           (m_header.sub_chunk_1_size == DEFAULT_SUB_CHUNK_1_SIZE) &&
-           (m_header.sub_chunk_2_size > 0);
+    return is_wave_header_valid(&m_header);
   }
 
   std::optional<int32_t> operator[](size_t index) const {

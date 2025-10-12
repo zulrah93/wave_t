@@ -61,8 +61,10 @@ int main(int arguments_size, char **arguments) {
      std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }
 
+  const char* input_path = "output.wav";
+
   //Read output.wav from our earlier example
-  wave_file_t input("/home/danny/Music/C4_261.6Hz.wav");
+  wave_file_t input(input_path);
 
   if (!input) {
     std::cout << "Failed to load output.wav it has invalid wav header!!"
@@ -98,7 +100,7 @@ int main(int arguments_size, char **arguments) {
             << " Amplitiude (RMS): " << max << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
-            << std::endl;
+            << std::endl; 
 
   wave_file_t idft_wav_file(dft_sample_size, frequency_domain);
   output.set_sample_rate(sample_rate);
