@@ -62,7 +62,7 @@ int main(int arguments_size, char **arguments) {
   }
 
   //Read output.wav from our earlier example
-  wave_file_t input("output.wav");
+  wave_file_t input("/home/danny/Music/C4_261.6Hz.wav");
 
   if (!input) {
     std::cout << "Failed to load output.wav it has invalid wav header!!"
