@@ -100,7 +100,7 @@ int main(int arguments_size, char **arguments) {
             << " Amplitiude (RMS): " << max << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
-            << std::endl; 
+            << std::endl;
 
   wave_file_t idft_wav_file(dft_sample_size, frequency_domain);
   output.set_sample_rate(sample_rate);
@@ -168,6 +168,8 @@ int main(int arguments_size, char **arguments) {
 
   const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
+  //Uncomment if you want to apply bitcrusher :)
+  //synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
     synth_output.save("synth_output.wav");
   } else {

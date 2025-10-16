@@ -57,6 +57,7 @@ constexpr auto FMT_ASCII = std::byteswap(0x666d7420);
 constexpr auto DATA_ASCII = std::byteswap(0x64617461);
 constexpr auto PCM = 1;
 constexpr size_t EXTRA_PARAM_SIZE_OFFSET{35};
+constexpr uint32_t BITCRUSHER_AMP_VALUE{64};
 constexpr auto _8_BITS_PER_SAMPLE = 8;
 constexpr auto _16_BITS_PER_SAMPLE = 16;
 constexpr auto _24_BITS_PER_SAMPLE = 24;
@@ -629,21 +630,24 @@ public:
         sample += wave_g[index];
       }
 
-      switch (m_header.bits_per_sample) {
+     switch (m_header.bits_per_sample) {
       case _8_BITS_PER_SAMPLE:
-        !is_stereo ? add_8_bits_sample(sample)
-                   : add_8_bits_sample(sample, sample);
+        !is_stereo ? add_8_bits_sample(m_apply_bitcrusher_effect ? (sample & 0x0f) : sample)
+                   : add_8_bits_sample(m_apply_bitcrusher_effect ? (sample & 0x0f) : sample, m_apply_bitcrusher_effect ? (sample & 0x0f) : sample);
         break;
       case _16_BITS_PER_SAMPLE:
-        !is_stereo ? add_16_bits_sample(sample)
-                   : add_16_bits_sample(sample, sample);
+        !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample)
+                   : add_16_bits_sample(m_apply_bitcrusher_effect ?
+                       (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_bits_sample(sample)
-                   : add_24_bits_sample(sample, sample);
+        !is_stereo ? add_24_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample)
+                   : add_24_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample);
         break;
       default:
-        break;
+        return false;
       }
     }
 
@@ -689,6 +693,8 @@ public:
       break;
     }
 
+    const double sample_rate = static_cast<double>(m_header.sample_rate);
+
     const double volume = helper::set_volume(
         volume_percent / static_cast<double>(wave_count), max_sample_value);
 
@@ -708,21 +714,24 @@ public:
       }
       switch (m_header.bits_per_sample) {
       case _8_BITS_PER_SAMPLE:
-        !is_stereo ? add_8_bits_sample(sample)
-                   : add_8_bits_sample(sample, sample);
+        !is_stereo ? add_8_bits_sample(m_apply_bitcrusher_effect ? (sample & 0x0f) : sample)
+                   : add_8_bits_sample(m_apply_bitcrusher_effect ? (sample & 0x0f) : sample, m_apply_bitcrusher_effect ? (sample & 0x0f) : sample);
         break;
       case _16_BITS_PER_SAMPLE:
-        !is_stereo ? add_16_bits_sample(sample)
-                   : add_16_bits_sample(sample, sample);
+        !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample)
+                   : add_16_bits_sample(m_apply_bitcrusher_effect ?
+                       (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int8_t>(sample)) : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_bits_sample(sample)
-                   : add_24_bits_sample(sample, sample);
+        !is_stereo ? add_24_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample)
+                   : add_24_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE * static_cast<int16_t>(sample)) : sample);
         break;
       default:
         return false;
       }
-      time += (1.0 / static_cast<double>(m_header.sample_rate));
+      time += (1.0 / sample_rate);
     }
 
     return true;
@@ -770,6 +779,14 @@ public:
     }
     return frequency_domain;
   }
+
+void apply_bitcrusher_effect() {
+    m_apply_bitcrusher_effect = true;
+}
+
+void apply_no_effect(void) {
+    m_apply_bitcrusher_effect = false;
+}
 
 #ifdef DEBUG
 
@@ -895,6 +912,7 @@ private:
 
   wave_header_t m_header;
   std::vector<int32_t> m_samples;
+  bool m_apply_bitcrusher_effect{false};
 };
 
 // Not to be directly used but more for the wave_file_t to help generate nice
