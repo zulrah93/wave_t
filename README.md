@@ -127,7 +127,7 @@ DFT and IDFT for pitch detection or FM synthesis, it also supports calculating t
 
 Also supports adding samples by converting a frequency domain (a vector of complex numbers) to PCM samples (essentially the time domain of the signal).
 
-Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Still needs more improvent but working for now.
+Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Support for applying bitcrusher effect. Still this header only library needs more improvent but its mostly working for now except the dft alogrithm. Either way always verify any code you will use in production.
 
 
 
