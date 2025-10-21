@@ -76,7 +76,7 @@ int main(int arguments_size, char **arguments) {
   std::cout << input.get_readable_wave_header() << std::endl
             << "number_of_samples=" << input.sample_size() << std::endl;
 
-  const size_t dft_sample_size = sample_rate / 2;
+  const size_t dft_sample_size = sample_rate; // NOTE: Larger values means slower time since this is a slow dft implementation
   const bool async =
     true; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
@@ -84,7 +84,9 @@ int main(int arguments_size, char **arguments) {
   size_t detected_frequency_index = 0;
   double max = std::numeric_limits<float>::min();
 
-  for (size_t frequency = 0; frequency < frequency_domain.size(); frequency++) {
+  const size_t max_frequency_index = (frequency_domain.size() / 2); // Nyquist limit means we can't go beyond the half the sample size or so I think
+
+  for (size_t frequency = 0; frequency < max_frequency_index; frequency++) {
     float magnitude = std::norm(frequency_domain[frequency]);
     if (magnitude >= max) {
       detected_frequency_index = frequency;
