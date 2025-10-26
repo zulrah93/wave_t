@@ -173,6 +173,14 @@ int main(int arguments_size, char **arguments) {
   //Uncomment if you want to apply bitcrusher :)
   //synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
+    for(size_t sample_index = 0; sample_index < 100; sample_index++) {
+        std::cout << " " << synth_output.index_as_float(sample_index).value_or(0.0f) << " "; // Safe because of the optional we don't have to worry if its less than 100 samples :)
+    }
+    std::cout << std::endl;
+    for(size_t sample_index = 100; sample_index < 200; sample_index++) {
+      std::cout << " " << synth_output.index_as_double(sample_index).value_or(0.0) << " ";
+    }
+    std::cout << std::endl;
     synth_output.save("synth_output.wav");
   } else {
     std::cout

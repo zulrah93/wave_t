@@ -454,9 +454,27 @@ public:
     return is_wave_header_valid(&m_header);
   }
 
-  std::optional<int32_t> operator[](size_t index) const {
+  constexpr std::optional<int32_t> operator[](size_t index) const {
     if (index < m_samples.size()) {
       return std::make_optional<int32_t>(m_samples[index]);
+    }
+    return std::nullopt;
+  }
+
+  // Indexes and gets the value as a float regardless if the wav file isn't saved as floating point PCM data
+  constexpr std::optional<float> index_as_float(const size_t & index) const {
+    if (index < m_samples.size()) {
+      const float max_sample_value = static_cast<float>(get_maximum_sample_value());
+      return std::make_optional<float>((static_cast<float>(m_samples[index]) / max_sample_value));
+    }
+    return std::nullopt;
+  }
+
+  // Same as index_as_float but returns doubles
+  constexpr std::optional<double> index_as_double(const size_t& index) const {
+    if (index < m_samples.size()) {
+      const double max_sample_value = static_cast<double>(get_maximum_sample_value());
+      return std::make_optional<double>((static_cast<double>(m_samples[index]) / max_sample_value));
     }
     return std::nullopt;
   }
@@ -536,23 +554,7 @@ public:
       return false;
     }
 
-    size_t max_sample_value = 1;
-
-    switch (m_header.bits_per_sample) {
-    case _8_BITS_PER_SAMPLE:
-      max_sample_value = CHAR_MAX;
-      break;
-    case _16_BITS_PER_SAMPLE:
-      max_sample_value = INT16_MAX;
-      break;
-    case _24_BITS_PER_SAMPLE:
-      max_sample_value = INT24_MAX;
-      break;
-    default:
-      max_sample_value = 1; // We don't support 32-bit yet but we could nothing
-                            // stopping it since the wav spec supports it
-      break;
-    }
+    const size_t max_sample_value = get_maximum_sample_value();
 
     const double volume = helper::set_volume(volume_percent, max_sample_value);
 
@@ -676,23 +678,7 @@ public:
         static_cast<size_t>((wave_type & wave_type_t::sawtooth) ==
                             (wave_type_t::sawtooth));
 
-    size_t max_sample_value = 1;
-
-    switch (m_header.bits_per_sample) {
-    case _8_BITS_PER_SAMPLE:
-      max_sample_value = CHAR_MAX;
-      break;
-    case _16_BITS_PER_SAMPLE:
-      max_sample_value = INT16_MAX;
-      break;
-    case _24_BITS_PER_SAMPLE:
-      max_sample_value = INT24_MAX;
-      break;
-    default:
-      max_sample_value = 1; // We don't support 32-bit yet but we could nothing
-                            // stopping it since the wav spec supports it
-      break;
-    }
+    const size_t max_sample_value = get_maximum_sample_value();
 
     const double sample_rate = static_cast<double>(m_header.sample_rate);
 
@@ -909,6 +895,26 @@ private:
         fwrite(samples.data(), sizeof(int8_t), samples.size(), wav_file_handle);
     fclose(wav_file_handle);
     return written_bytes == expected_bytes;
+  }
+
+  constexpr size_t get_maximum_sample_value() const {
+    size_t max_sample_value = static_cast<size_t>(CHAR_MAX);
+    switch (m_header.bits_per_sample) {
+      case _8_BITS_PER_SAMPLE:
+        max_sample_value = static_cast<size_t>(CHAR_MAX);
+        break;
+      case _16_BITS_PER_SAMPLE:
+        max_sample_value = static_cast<size_t>(INT16_MAX);
+        break;
+      case _24_BITS_PER_SAMPLE:
+        max_sample_value = static_cast<size_t>(INT24_MAX);
+        break;
+      default:
+        max_sample_value = static_cast<size_t>(CHAR_MAX); // We don't support 32-bit yet but we could nothing
+        // stopping it since the wav spec supports it
+        break;
+    }
+    return max_sample_value;
   }
 
   wave_header_t m_header;
