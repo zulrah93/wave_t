@@ -48,6 +48,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <generator>
 
 using namespace std::literals::complex_literals;
 
@@ -477,6 +478,38 @@ public:
       return std::make_optional<double>((static_cast<double>(m_samples[index]) / max_sample_value));
     }
     return std::nullopt;
+  }
+
+  //Provides a safe way to generate the next sample and wrap around back to the beginning -- maybe a non circular option can also be an option?
+  int32_t pcm_sink(void) {
+      if (m_samples.empty()) {
+          return 0;
+      }
+      auto& next_value = m_samples[m_sink_index];
+      ++m_sink_index %= m_samples.size();
+      return next_value;
+  }
+
+  // Same behavior as pcm_sink but returns PCM float values in the range of [-1.0, 1.0]
+  float pcm_float_sink(void) {
+      if (m_samples.empty()) {
+          return 0;
+      }
+      const float max_sample_value = static_cast<float>(get_maximum_sample_value());
+      float next_value = static_cast<float>(m_samples[m_sink_index]) / max_sample_value;
+      ++m_sink_index %= m_samples.size();
+      return next_value;
+  }
+
+  // Same behavior as pcm_sink but returns PCM double values in the range of [-1.0, 1.0]
+  double pcm_double_sink(void) {
+      if (m_samples.empty()) {
+          return 0;
+      }
+      const double max_sample_value = static_cast<double>(get_maximum_sample_value());
+      double next_value = static_cast<double>(m_samples[m_sink_index]) / max_sample_value;
+      ++m_sink_index %= m_samples.size();
+      return next_value;
   }
 
   size_t sample_size(void) const { return m_samples.size(); }
@@ -920,6 +953,7 @@ private:
   wave_header_t m_header;
   std::vector<int32_t> m_samples;
   bool m_apply_bitcrusher_effect{false};
+  size_t m_sink_index{0ul};
 };
 
 // Not to be directly used but more for the wave_file_t to help generate nice

@@ -116,7 +116,7 @@ int main(int arguments_size, char **arguments) {
   wave_file_t synth_output;
   synth_output.set_sample_rate(sample_rate);
   synth_output.set_number_of_channels(1);
-  synth_output.set_bits_per_sample(24);
+  synth_output.set_bits_per_sample(24); // Set it to 8-bit if you want that retro feel :p
 
   synth_config_t configuration;
 
@@ -174,11 +174,15 @@ int main(int arguments_size, char **arguments) {
   //synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
     for(size_t sample_index = 0; sample_index < 100; sample_index++) {
-        std::cout << " " << synth_output.index_as_float(sample_index).value_or(0.0f) << " "; // Safe because of the optional we don't have to worry if its less than 100 samples :)
+        std::cout << " " << synth_output.pcm_float_sink() << " ";
     }
     std::cout << std::endl;
     for(size_t sample_index = 100; sample_index < 200; sample_index++) {
-      std::cout << " " << synth_output.index_as_double(sample_index).value_or(0.0) << " ";
+      std::cout << " " << synth_output.pcm_double_sink() << " ";
+    }
+    std::cout << std::endl;
+    for(size_t sample_index = 300; sample_index < 400; sample_index++) { // Try a number beyond the total sample size and see the behavior
+      std::cout << " " << synth_output.pcm_sink() << " ";
     }
     std::cout << std::endl;
     synth_output.save("synth_output.wav");
