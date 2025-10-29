@@ -230,7 +230,7 @@ enum oscillator_selection_t : uint8_t {
   oscillator_f = 6,
   oscillator_g = 7
 };
-enum oscillator_type_t : uint8_t { empty = 0, carrier = 1, modulation = 2 };
+enum oscillator_type_t : uint8_t { empty = 0, carrier = 1, frequency_modulation = 2 };
 struct oscillator_config_t {
   oscillator_type_t operator_type;
   uint8_t wave_type; // Can be a combination of multiple waves so this
@@ -964,7 +964,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_a.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1079,7 +1079,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_b.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1196,7 +1196,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_c.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1312,7 +1312,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_d.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1428,7 +1428,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1544,7 +1544,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1660,7 +1660,7 @@ namespace processing_functions {
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
     if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::modulation) {
+        oscillator_type_t::frequency_modulation) {
       return samples;
     }
     samples.reserve(sample_size);
