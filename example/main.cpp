@@ -171,7 +171,7 @@ int main(int arguments_size, char **arguments) {
   const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   //Uncomment if you want to apply bitcrusher :)
-  //synth_output.apply_bitcrusher_effect();
+  synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
     for(size_t sample_index = 0; sample_index < 100; sample_index++) {
         std::cout << " " << synth_output.pcm_float_sink() << " ";
