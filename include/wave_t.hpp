@@ -60,9 +60,10 @@ constexpr auto PCM = 1;
 constexpr size_t EXTRA_PARAM_SIZE_OFFSET{35};
 constexpr uint32_t BITCRUSHER_AMP_VALUE_16_BIT{1};
 constexpr uint32_t BITCRUSHER_AMP_VALUE_24_BIT{24};
-constexpr auto _8_BITS_PER_SAMPLE = 8;
-constexpr auto _16_BITS_PER_SAMPLE = 16;
-constexpr auto _24_BITS_PER_SAMPLE = 24;
+constexpr auto _8_BITS_PER_SAMPLE{8};
+constexpr auto _16_BITS_PER_SAMPLE{16};
+constexpr auto _24_BITS_PER_SAMPLE{24};
+constexpr auto _32_BITS_PER_SAMPLE{32};
 constexpr auto INT24_MAX = 8388607;
 constexpr auto BITS_PER_BYTE = 8;
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
@@ -432,6 +433,14 @@ public:
           }
           break;
         }
+        case _32_BITS_PER_SAMPLE: {
+          const int32_t *samples =
+              reinterpret_cast<int32_t *>(&temp_buffer[sizeof(wave_header_t)]);
+          for (size_t index = 0; index < sample_size; index++) {
+            m_samples.push_back(samples[index]);
+          }
+          break;
+        }
         default:
           break;
         }
@@ -525,7 +534,7 @@ public:
   }
   const wave_header_t &get_header(void) const { return m_header; }
 
-  bool add_24_bits_sample(const int32_t sample, ...) {
+  bool add_24_32_bits_sample(const int32_t sample, ...) {
     va_list args;
     if (m_header.number_of_channels > 1) {
       va_start(args, sample);
@@ -677,9 +686,15 @@ public:
                        (BITCRUSHER_AMP_VALUE_16_BIT * (sample % (INT16_MAX / 4))) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_16_BIT * (sample % (INT16_MAX / 4))) : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_bits_sample(m_apply_bitcrusher_effect
+        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
                             ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample)
-                   : add_24_bits_sample(m_apply_bitcrusher_effect
+                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample);
+        break;
+      case _32_BITS_PER_SAMPLE:
+        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample)
+                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
                             ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_24_BIT * (sample % (INT24_MAX / 8))) : sample);
         break;
       default:
@@ -743,9 +758,15 @@ public:
                        (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int8_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int8_t>(sample)) : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_bits_sample(m_apply_bitcrusher_effect
+        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
                             ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample)
-                   : add_24_bits_sample(m_apply_bitcrusher_effect
+                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample);
+        break;
+      case _32_BITS_PER_SAMPLE:
+        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
+                            ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample)
+                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
                             ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample, m_apply_bitcrusher_effect ? (BITCRUSHER_AMP_VALUE_24_BIT * static_cast<int16_t>(sample)) : sample);
         break;
       default:
@@ -775,6 +796,9 @@ public:
     }
     case _24_BITS_PER_SAMPLE: {
       return save_as_24_bits(file_path);
+    }
+    case _32_BITS_PER_SAMPLE: {
+      return save_as_32_bits(file_path);
     }
     default: {
       return false;
@@ -930,6 +954,23 @@ private:
     return written_bytes == expected_bytes;
   }
 
+  bool save_as_32_bits(const std::string &file_path) {
+    auto wav_file_handle = fopen(file_path.c_str(), "wb");
+    if (nullptr == wav_file_handle) {
+      return false;
+    }
+    const size_t expected_bytes =
+        sizeof(m_header) + (sizeof(int32_t) * m_samples.size());
+    size_t written_bytes =
+        fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
+               sizeof(m_header), wav_file_handle);
+    written_bytes += (fwrite(m_samples.data(), sizeof(int32_t), m_samples.size(),
+                             wav_file_handle) *
+                      sizeof(int32_t));
+    fclose(wav_file_handle);
+    return written_bytes == expected_bytes;
+  }
+
   constexpr size_t get_maximum_sample_value() const {
     size_t max_sample_value = static_cast<size_t>(CHAR_MAX);
     switch (m_header.bits_per_sample) {
@@ -941,6 +982,9 @@ private:
         break;
       case _24_BITS_PER_SAMPLE:
         max_sample_value = static_cast<size_t>(INT24_MAX);
+        break;
+      case _32_BITS_PER_SAMPLE:
+        max_sample_value = static_cast<size_t>(INT32_MAX);
         break;
       default:
         max_sample_value = static_cast<size_t>(CHAR_MAX); // We don't support 32-bit yet but we could nothing
