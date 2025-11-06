@@ -1,3 +1,29 @@
+//
+//
+// MIT License
+//
+// Copyright (c) 2025 Daniel Lopez
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+//
+
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -76,7 +102,7 @@ int main(int arguments_size, char **arguments) {
     return 1;
   }
 
-  std::cout << input.get_readable_wave_header() << std::endl
+  std::cout << "\033[01;33m" << input.get_readable_wave_header() << "\033[0m" << std::endl
             << "number_of_samples=" << input.sample_size() << std::endl;
 
   const size_t dft_sample_size = input.sample_size(); // NOTE: Larger values means slower time since this is a slow dft implementation
@@ -102,13 +128,13 @@ int main(int arguments_size, char **arguments) {
                   (static_cast<float>(sample_rate) /
                    (static_cast<float>(dft_sample_size))));
 
-  double percent_error = (100.0 * std::abs((fundamental_frequency - D5_FREQUENCY) / fundamental_frequency));
+  double percent_error = (100.0 * std::abs((fundamental_frequency - D5_FREQUENCY) / D5_FREQUENCY));
 
   std::cout << "Index: " << detected_frequency_index << std::endl;
-  std::cout << "Fundamental frequency: "
+  std::cout << "\033[01;32mFundamental frequency: "
             << fundamental_frequency
-            << "\033[01;31m "
-            << "(% error is " << percent_error << ") \033[0m" << std::endl;
+            << "\033[0m\033[01;31m "
+            << "(percent error is " << percent_error << " %) \033[0m" << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
