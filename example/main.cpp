@@ -3,8 +3,9 @@
 #include <limits>
 #include <wave_t.hpp>
 
-constexpr double C4_FREQUENCY = 261.626;
-constexpr double A4_FREQUENCY = 440.000;
+constexpr double C4_FREQUENCY{261.626};
+constexpr double A4_FREQUENCY{440.000};
+constexpr double D5_FREQUENCY{622.25};
 
 double detune(double x) {
 
@@ -61,13 +62,15 @@ int main(int arguments_size, char **arguments) {
      std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }
 
-  const char* input_path = "output.wav";
+  std::cout << "Finding fundamental frequency of D# Trumpet sample reference frequency is " << D5_FREQUENCY << std::endl;
+
+  const char* input_path = "../samples/D#5_Trumpet.wav";
 
   //Read output.wav from our earlier example
   wave_file_t input(input_path);
 
   if (!input) {
-    std::cout << "Failed to load output.wav it has invalid wav header!!"
+    std::cout << "Failed to load D#5_Trumpet.wav it has invalid wav header!!"
               << std::endl;
     std::cout << "DEBUG: " << std::endl << input.get_readable_wave_header();
     return 1;
@@ -76,7 +79,7 @@ int main(int arguments_size, char **arguments) {
   std::cout << input.get_readable_wave_header() << std::endl
             << "number_of_samples=" << input.sample_size() << std::endl;
 
-  const size_t dft_sample_size = sample_rate; // NOTE: Larger values means slower time since this is a slow dft implementation
+  const size_t dft_sample_size = input.sample_size(); // NOTE: Larger values means slower time since this is a slow dft implementation
   const bool async =
     true; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
@@ -84,8 +87,8 @@ int main(int arguments_size, char **arguments) {
   size_t detected_frequency_index = 0;
   double max = std::numeric_limits<float>::min();
 
-  const size_t max_frequency_index = (frequency_domain.size() / 2); // Nyquist limit means we can't go beyond the half the sample size or so I think
-
+  const size_t max_frequency_index = input.get_nyquist_frequency(); // Nyquist limit means we can't go beyond the half the sample size or so I think
+  std::cout << "The nyquist frequency is " << max_frequency_index << std::endl;
   for (size_t frequency = 0; frequency < max_frequency_index; frequency++) {
     float magnitude = std::norm(frequency_domain[frequency]);
     if (magnitude >= max) {
@@ -94,12 +97,17 @@ int main(int arguments_size, char **arguments) {
     }
   }
 
+
+  double fundamental_frequency = (static_cast<float>(detected_frequency_index) *
+                  (static_cast<float>(sample_rate) /
+                   (static_cast<float>(dft_sample_size))));
+
+  double percent_error = (100.0 * std::abs((fundamental_frequency - D5_FREQUENCY) / fundamental_frequency));
+
   std::cout << "Index: " << detected_frequency_index << std::endl;
   std::cout << "Fundamental frequency: "
-            << (static_cast<float>(detected_frequency_index) *
-                (static_cast<float>(sample_rate) /
-                 (static_cast<float>(dft_sample_size))))
-            << " Amplitiude (RMS): " << max << std::endl;
+            << fundamental_frequency
+            << " Percent Error: " << percent_error << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
@@ -173,18 +181,6 @@ int main(int arguments_size, char **arguments) {
   //Uncomment if you want to apply bitcrusher :)
   synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
-    for(size_t sample_index = 0; sample_index < 100; sample_index++) {
-        std::cout << " " << synth_output.pcm_float_sink() << " ";
-    }
-    std::cout << std::endl;
-    for(size_t sample_index = 100; sample_index < 200; sample_index++) {
-      std::cout << " " << synth_output.pcm_double_sink() << " ";
-    }
-    std::cout << std::endl;
-    for(size_t sample_index = 300; sample_index < 400; sample_index++) { // Try a number beyond the total sample size and see the behavior
-      std::cout << " " << synth_output.pcm_sink() << " ";
-    }
-    std::cout << std::endl;
     synth_output.save("synth_output.wav");
   } else {
     std::cout

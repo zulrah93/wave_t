@@ -465,6 +465,13 @@ public:
     return is_wave_header_valid(&m_header);
   }
 
+  constexpr uint32_t get_nyquist_frequency(void) const {
+        if (0 == m_header.sample_rate) {
+            throw std::invalid_argument("Sample rate of 0 is invalid and thus no nyquist frequency for you!!");
+        }
+        return m_header.sample_rate / 2;
+  }
+
   constexpr std::optional<int32_t> operator[](size_t index) const {
     if (index < m_samples.size()) {
       return std::make_optional<int32_t>(m_samples[index]);
