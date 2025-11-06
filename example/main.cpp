@@ -107,7 +107,8 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Index: " << detected_frequency_index << std::endl;
   std::cout << "Fundamental frequency: "
             << fundamental_frequency
-            << " Percent Error: " << percent_error << std::endl;
+            << "\033[01;31m "
+            << "(% error is " << percent_error << ") \033[0m" << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
