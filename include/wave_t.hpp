@@ -24,7 +24,7 @@
 //
 //
 
-#if __cplusplus >= 202302L // Sorry this uses c++-23 features
+#if __cplusplus >= 20100L // Sorry this uses c++-23 features
 
 #ifndef WAVE_T_HPP
 #define WAVE_T_HPP
@@ -218,6 +218,12 @@ void discrete_fourier_transform_async(
   for (auto &future : futures) {
     frequency_domain.push_back(future.get());
   }
+}
+
+//Converts a PCM sample (8-bit, 16-bit, 24-bit, etc.) to its decibel full scale value where 0 dB is like the max and beyond that is essenitally clipping
+//Refer to: https://en.wikipedia.org/wiki/DBFS
+constexpr double get_decibel_fullscale_from_sample(const int32_t sample, const int32_t max_sample_value) {
+	return std::log10(std::abs(static_cast<double>(sample)) / static_cast<double>(max_sample_value)) * 20.0;
 }
 
 } // namespace helper
@@ -527,6 +533,18 @@ public:
       double next_value = static_cast<double>(m_samples[m_sink_index]) / max_sample_value;
       ++m_sink_index %= m_samples.size();
       return next_value;
+  }
+
+  // Just looks at the max PCM sample and converts it to dB FS for example peak of wav file could be -20 db FS (pretty low sounding relative to a 0 dB FS signal)
+  double get_peak_decibel_fullscale_of_signal(void) {
+	int32_t peak_sample = INT32_MIN;
+	const double max_sample_value = static_cast<double>(get_maximum_sample_value());
+	for(auto& sample : m_samples) {
+		if (sample > peak_sample) {
+			peak_sample = sample;
+		}
+	}
+	return helper::get_decibel_fullscale_from_sample(peak_sample, max_sample_value);
   }
 
   size_t sample_size(void) const { return m_samples.size(); }

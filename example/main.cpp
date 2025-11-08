@@ -208,6 +208,7 @@ int main(int arguments_size, char **arguments) {
   //Uncomment if you want to apply bitcrusher :)
   //synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size, 0.12, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
     synth_output.save("synth_output.wav");
   } else {
     std::cout
