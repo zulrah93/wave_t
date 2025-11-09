@@ -1037,7 +1037,7 @@ private:
 
 // Not to be directly used but more for the wave_file_t to help generate nice
 // synth sounds!
-namespace processing_functions {
+namespace processing_functions { //TODO: This might need refactoring soon :)
   std::vector<int32_t> osciallator_a(
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
@@ -1054,7 +1054,7 @@ namespace processing_functions {
       double offset{};
       double frequency_offset{};
       double phase_offset{};
-      double amplitutde_offset{};
+      double amplitude_offset{};
       double modulation_amplitude{};
       for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
@@ -1117,34 +1117,56 @@ namespace processing_functions {
           offset +=
               helper::pcm_saw_tooth(time, volume, modulating_frequency);
         }
+
+        if (modulation_amplitude <= 0.0) {
+            modulation_amplitude = 1.0;
+        }
+
+        offset /= volume;
+        offset *= modulation_amplitude;
+
+        switch (selected_osc->operator_type) {
+          case oscillator_type_t::frequency_modulation: {
+              frequency_offset = offset;
+              break;
+          }
+          case oscillator_type_t::phase_modulation: {
+              phase_offset = offset;
+              break;
+          }
+          case oscillator_type_t::amplitude_modulation: {
+              amplitude_offset = offset;
+              break;
+          }
+          default: {
+               throw std::invalid_argument("How is this possible?");
+          }                                           
       }
 
-      if (modulation_amplitude <= 0.0) {
-        modulation_amplitude = 1.0;
       }
 
-      frequency_offset /= volume;
-      frequency_offset *= modulation_amplitude;
       const auto wave_type =
           static_cast<uint8_t>(configuration.oscillator_a.wave_type);
+
+      
 
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(configuration.oscillator_a.frequency +
                                        frequency_offset,
-                                   time, volume, phase + phase_offset);
+                                   time, volume + amplitude_offset, phase + phase_offset);
       }
       if ((wave_type & wave_type_t::triangle)) {
-        sample += helper::pcm_triangle(time, volume,
+        sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                        configuration.oscillator_a.frequency +
                                            frequency_offset);
       }
       if ((wave_type & wave_type_t::square)) {
-        sample += helper::pcm_square(time, volume,
+        sample += helper::pcm_square(time, volume + amplitude_offset,
                                      configuration.oscillator_a.frequency +
                                          frequency_offset);
       }
       if ((wave_type & wave_type_t::sawtooth)) {
-        sample += helper::pcm_saw_tooth(time, volume,
+        sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                         configuration.oscillator_a.frequency +
                                             frequency_offset);
       }
@@ -1741,7 +1763,7 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_g.operator_type ==
+    if (configuration.oscillator_g.operator_type !=
         oscillator_type_t::carrier) {
       return samples;
     }

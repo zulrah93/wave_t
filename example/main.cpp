@@ -88,7 +88,7 @@ int main(int arguments_size, char **arguments) {
      std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }
 
-  std::cout << "Finding fundamental frequency of D# Trumpet sample reference frequency is " << D5_FREQUENCY << std::endl;
+  std::cout << "Finding fundamental frequency of D#5 Trumpet sample reference frequency is " << D5_FREQUENCY << std::endl;
 
   const char* input_path = "../samples/D#5_Trumpet.wav";
 
@@ -153,14 +153,14 @@ int main(int arguments_size, char **arguments) {
   synth_output.set_number_of_channels(1);
   synth_output.set_bits_per_sample(32); // Set it to 8-bit if you want that retro feel :p
 
-  synth_config_t configuration;
+  synth_config_t configuration{};
 
   // Supersaw example -- hopefully :P
 
   constexpr double detune_amount = 0.0;
 
   configuration.oscillator_a.operator_type = carrier;
-  configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_a.wave_type = wave_type_t::sine;
   configuration.oscillator_a.frequency = C4_FREQUENCY * (1.0 - (0.88997686 * detune(detune_amount)));
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
@@ -175,7 +175,6 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_c.frequency = C4_FREQUENCY * (1.0 - (0.98047643 * detune(detune_amount)));
   configuration.oscillator_c.osc_to_modulate =
       oscillator_selection_t::none_selected;
-
 
   configuration.oscillator_d.operator_type = carrier;
   configuration.oscillator_d.wave_type = wave_type_t::sawtooth;
@@ -200,7 +199,6 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_g.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
-
   constexpr double seconds = 1.25;
 
   const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
@@ -209,9 +207,9 @@ int main(int arguments_size, char **arguments) {
   //synth_output.apply_bitcrusher_effect();
   if (synth_output.generate_synth(synth_sample_size,  0.13, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
-    for(size_t index = 0; index < (synth_sample_size / 16); index++) {
+    /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
         std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << " dBFS" << std::endl;
-    }
+    }*/
     synth_output.save("synth_output.wav");
   } else {
     std::cout
