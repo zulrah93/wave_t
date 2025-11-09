@@ -1042,8 +1042,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_a.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_a.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1051,7 +1051,10 @@ namespace processing_functions {
     double time{};
     for (size_t _{}; _ < sample_size; _++) {
       int32_t sample{};
-      double frequency_offset = 0.0;
+      double offset{};
+      double frequency_offset{};
+      double phase_offset{};
+      double amplitutde_offset{};
       double modulation_amplitude{};
       for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
@@ -1099,19 +1102,19 @@ namespace processing_functions {
         const double modulating_frequency = selected_osc->frequency;
 
         if ((selected_osc->wave_type & wave_type_t::sine)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_sine(modulating_frequency, time, volume, phase);
         }
         if ((selected_osc->wave_type & wave_type_t::triangle)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_triangle(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::square)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_square(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_saw_tooth(time, volume, modulating_frequency);
         }
       }
@@ -1128,7 +1131,7 @@ namespace processing_functions {
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(configuration.oscillator_a.frequency +
                                        frequency_offset,
-                                   time, volume, phase);
+                                   time, volume, phase + phase_offset);
       }
       if ((wave_type & wave_type_t::triangle)) {
         sample += helper::pcm_triangle(time, volume,
@@ -1157,8 +1160,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_b.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_b.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1274,8 +1277,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_c.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_c.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1390,8 +1393,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_d.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_d.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1506,8 +1509,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_e.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1622,8 +1625,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_f.operator_type !=
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
@@ -1738,8 +1741,8 @@ namespace processing_functions {
       const size_t &sample_size, const double &volume, const bool &is_stereo,
       const uint32_t &sample_rate, synth_config_t &configuration) {
     std::vector<int32_t> samples;
-    if (configuration.oscillator_e.operator_type ==
-        oscillator_type_t::frequency_modulation) {
+    if (configuration.oscillator_g.operator_type ==
+        oscillator_type_t::carrier) {
       return samples;
     }
     samples.reserve(sample_size);
