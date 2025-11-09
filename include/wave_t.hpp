@@ -503,6 +503,15 @@ public:
     return std::nullopt;
   }
 
+  // Same as index_as_float but returns the samples dB full scale
+  constexpr std::optional<double> index_as_dBFS(const size_t& index) const {
+    if (index < m_samples.size()) {
+      const double max_sample_value = static_cast<double>(get_maximum_sample_value());
+      return std::make_optional<double>(helper::get_decibel_fullscale_from_sample(m_samples[index], max_sample_value));
+    }
+    return std::nullopt;
+  }
+
   //Provides a safe way to generate the next sample and wrap around back to the beginning -- maybe a non circular option can also be an option?
   int32_t pcm_sink(void) {
       if (m_samples.empty()) {
