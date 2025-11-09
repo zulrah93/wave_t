@@ -24,7 +24,7 @@
 //
 //
 
-#if __cplusplus >= 20100L // Sorry this uses c++-23 features
+#if __cplusplus >= 202302L // Sorry this uses c++-23 features
 
 #ifndef WAVE_T_HPP
 #define WAVE_T_HPP
