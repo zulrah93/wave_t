@@ -238,7 +238,7 @@ enum oscillator_selection_t : uint8_t {
   oscillator_f = 6,
   oscillator_g = 7
 };
-enum oscillator_type_t : uint8_t { empty = 0, carrier = 1, frequency_modulation = 2 };
+enum oscillator_type_t : uint8_t { empty = 0, carrier = 1, frequency_modulation = 2, phase_modulation = 3, amplitude_modulation };
 struct oscillator_config_t {
   oscillator_type_t operator_type;
   uint8_t wave_type; // Can be a combination of multiple waves so this
@@ -1556,7 +1556,7 @@ namespace processing_functions {
         }
 
         if (selected_osc->osc_to_modulate !=
-            oscillator_selection_t::oscillator_d) {
+            oscillator_selection_t::oscillator_e) {
           continue;
         }
 
@@ -1672,7 +1672,7 @@ namespace processing_functions {
         }
 
         if (selected_osc->osc_to_modulate !=
-            oscillator_selection_t::oscillator_d) {
+            oscillator_selection_t::oscillator_f) {
           continue;
         }
 
@@ -1788,7 +1788,7 @@ namespace processing_functions {
         }
 
         if (selected_osc->osc_to_modulate !=
-            oscillator_selection_t::oscillator_d) {
+            oscillator_selection_t::oscillator_g) {
           continue;
         }
 
