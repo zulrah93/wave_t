@@ -160,7 +160,7 @@ int main(int arguments_size, char **arguments) {
   constexpr double detune_amount = 0.0;
 
   configuration.oscillator_a.operator_type = carrier;
-  configuration.oscillator_a.wave_type = wave_type_t::sine;
+  configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency = C4_FREQUENCY * (1.0 - (0.88997686 * detune(detune_amount)));
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;

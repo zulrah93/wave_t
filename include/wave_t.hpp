@@ -1099,6 +1099,8 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
           continue;
         }
 
+        modulation_amplitude += selected_osc->modulation_amplitude;
+
         const double modulating_frequency = selected_osc->frequency;
 
         if ((selected_osc->wave_type & wave_type_t::sine)) {
