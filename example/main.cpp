@@ -155,8 +155,11 @@ int main(int arguments_size, char **arguments) {
 
   synth_config_t configuration{};
 
-  // Supersaw example -- hopefully :P
+#pragma message("Ucomment line below to get alternative synth demo")
+//#define AM_PM_MODULATION_DEMO
 
+#ifndef AM_PM_MODULATION_DEMO
+  // Supersaw example -- hopefully :P
   constexpr double detune_amount = 0.0;
 
   configuration.oscillator_a.operator_type = carrier;
@@ -198,8 +201,8 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_g.frequency = C4_FREQUENCY * (1.0 - (1.10745242 * detune(detune_amount)));
   configuration.oscillator_g.osc_to_modulate =
       oscillator_selection_t::none_selected;
-
-  constexpr double seconds = 1.25;
+  
+  constexpr double seconds{1.25};
 
   const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
@@ -220,6 +223,47 @@ int main(int arguments_size, char **arguments) {
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
+#else
+  configuration.oscillator_a.operator_type = carrier;
+  configuration.oscillator_a.wave_type = wave_type_t::sine;
+  configuration.oscillator_a.frequency = C4_FREQUENCY;
+  configuration.oscillator_a.osc_to_modulate =
+      oscillator_selection_t::none_selected;
+
+  configuration.oscillator_b.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_b.wave_type = wave_type_t::sine;
+  configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
+  configuration.oscillator_b.osc_to_modulate = oscillator_selection_t::oscillator_a;
+  configuration.oscillator_b.modulation_amplitude = 10.0;
+
+  configuration.oscillator_c.operator_type = oscillator_type_t::amplitude_modulation;
+  configuration.oscillator_c.wave_type = wave_type_t::sine;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 16.0;
+  configuration.oscillator_c.osc_to_modulate = oscillator_selection_t::oscillator_a;
+  configuration.oscillator_c.modulation_amplitude = 5.0;
+
+  constexpr double seconds{5.25};
+
+  const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+
+  //Uncomment if you want to apply bitcrusher :)
+  //synth_output.apply_bitcrusher_effect();
+  if (synth_output.generate_synth(synth_sample_size,  0.93, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
+    /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
+        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << " dBFS" << std::endl;
+    }*/
+    synth_output.save("synth_output.wav");
+  } else {
+    std::cout
+        << "Invalid synth configuration or failed to generate synth -- sorry."
+        << std::endl;
+  }
+
+  std::cout
+      << "Demo finished!! If you don't see this message assume process crashed!"
+      << std::endl;
+#endif
 
   return 0;
 

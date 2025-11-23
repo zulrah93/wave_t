@@ -1143,7 +1143,7 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
           default: {
                throw std::invalid_argument("How is this possible?");
           }                                           
-      }
+        }
 
       }
 
@@ -1193,7 +1193,10 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
     double time{};
     for (size_t _{}; _ < sample_size; _++) {
       int32_t sample{};
-      double frequency_offset = 0.0;
+      double offset{};
+      double frequency_offset{};
+      double phase_offset{};
+      double amplitude_offset{};
       double modulation_amplitude{};
       for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
@@ -1243,29 +1246,47 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
         const double modulating_frequency = selected_osc->frequency;
 
         if ((selected_osc->wave_type & wave_type_t::sine)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_sine(modulating_frequency, time, volume, phase);
         }
         if ((selected_osc->wave_type & wave_type_t::triangle)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_triangle(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::square)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_square(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_saw_tooth(time, volume, modulating_frequency);
         }
-      }
+        if (modulation_amplitude <= 0.0) {
+          modulation_amplitude = 1.0;
+        }
 
-      if (modulation_amplitude <= 0.0) {
-        modulation_amplitude = 1.0;
-      }
+        offset /= volume;
+        offset *= modulation_amplitude;
 
-      frequency_offset /= volume;
-      frequency_offset *= modulation_amplitude;
+        switch (selected_osc->operator_type) {
+          case oscillator_type_t::frequency_modulation: {
+              frequency_offset = offset;
+              break;
+          }
+          case oscillator_type_t::phase_modulation: {
+              phase_offset = offset;
+              break;
+          }
+          case oscillator_type_t::amplitude_modulation: {
+              amplitude_offset = offset;
+              break;
+          }
+          default: {
+               throw std::invalid_argument("How is this possible?");
+          }                                           
+        }
+
+      }
 
       const auto wave_type =
           static_cast<uint8_t>(configuration.oscillator_b.wave_type);
