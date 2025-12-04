@@ -224,6 +224,9 @@ int main(int arguments_size, char **arguments) {
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
 #else
+
+  constexpr const double E4_FREQUENCY = 329.6276;
+
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sine;
   configuration.oscillator_a.frequency = C4_FREQUENCY;
@@ -239,8 +242,25 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_c.operator_type = oscillator_type_t::amplitude_modulation;
   configuration.oscillator_c.wave_type = wave_type_t::sine;
   configuration.oscillator_c.frequency = C4_FREQUENCY * 16.0;
-  configuration.oscillator_c.osc_to_modulate = oscillator_selection_t::oscillator_a;
-  configuration.oscillator_c.modulation_amplitude = 5.0;
+  configuration.oscillator_c.osc_to_modulate = oscillator_selection_t::oscillator_b;
+  configuration.oscillator_c.modulation_amplitude = 10.0;
+
+  configuration.oscillator_d.operator_type = oscillator_type_t::amplitude_modulation;
+  configuration.oscillator_d.wave_type = wave_type_t::sine;
+  configuration.oscillator_d.frequency = C4_FREQUENCY * 16.0;
+  configuration.oscillator_d.osc_to_modulate = oscillator_selection_t::oscillator_a;
+  configuration.oscillator_d.modulation_amplitude = 5.0;
+
+  configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
+  configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_e.frequency = E4_FREQUENCY;
+  configuration.oscillator_e.osc_to_modulate = oscillator_selection_t::none_selected;
+
+  // configuration.oscillator_f.operator_type = oscillator_type_t::amplitude_modulation;
+  // configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
+  // configuration.oscillator_f.frequency = E4_FREQUENCY * 8;
+  // configuration.oscillator_f.osc_to_modulate = oscillator_selection_t::oscillator_e;
+  // configuration.oscillator_d.modulation_amplitude = 5.0;
 
   constexpr double seconds{5.25};
 
@@ -248,7 +268,7 @@ int main(int arguments_size, char **arguments) {
 
   //Uncomment if you want to apply bitcrusher :)
   //synth_output.apply_bitcrusher_effect();
-  if (synth_output.generate_synth(synth_sample_size,  0.93, configuration)) {
+  if (synth_output.generate_synth(synth_sample_size,  0.60, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
     /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
         std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << " dBFS" << std::endl;

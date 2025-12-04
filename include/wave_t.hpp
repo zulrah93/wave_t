@@ -1247,19 +1247,19 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
 
         if ((selected_osc->wave_type & wave_type_t::sine)) {
           offset +=
-              helper::pcm_sine(modulating_frequency, time, volume, phase);
+              helper::pcm_sine(modulating_frequency, time, volume + amplitude_offset, phase + phase_offset);
         }
         if ((selected_osc->wave_type & wave_type_t::triangle)) {
           offset +=
-              helper::pcm_triangle(time, volume, modulating_frequency);
+              helper::pcm_triangle(time, volume + amplitude_offset, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::square)) {
           offset +=
-              helper::pcm_square(time, volume, modulating_frequency);
+              helper::pcm_square(time, volume + amplitude_offset, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
           offset +=
-              helper::pcm_saw_tooth(time, volume, modulating_frequency);
+              helper::pcm_saw_tooth(time, volume + amplitude_offset, modulating_frequency);
         }
         if (modulation_amplitude <= 0.0) {
           modulation_amplitude = 1.0;
@@ -1294,20 +1294,20 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(configuration.oscillator_b.frequency +
                                        frequency_offset,
-                                   time, volume, phase);
+                                   time, volume + amplitude_offset, phase + phase_offset);
       }
       if ((wave_type & wave_type_t::triangle)) {
-        sample += helper::pcm_triangle(time, volume,
+        sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                        configuration.oscillator_b.frequency +
                                            frequency_offset);
       }
       if ((wave_type & wave_type_t::square)) {
-        sample += helper::pcm_square(time, volume,
+        sample += helper::pcm_square(time, volume + amplitude_offset,
                                      configuration.oscillator_b.frequency +
                                          frequency_offset);
       }
       if ((wave_type & wave_type_t::sawtooth)) {
-        sample += helper::pcm_saw_tooth(time, volume,
+        sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                         configuration.oscillator_b.frequency +
                                             frequency_offset);
       }
@@ -1331,7 +1331,10 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
     double time{};
     for (size_t _{}; _ < sample_size; _++) {
       int32_t sample{};
-      double frequency_offset = 0.0;
+      double offset{};
+      double frequency_offset{};
+      double phase_offset{};
+      double amplitude_offset{};
       double modulation_amplitude{};
       for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
         oscillator_config_t *selected_osc = nullptr;
@@ -1380,29 +1383,48 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
         const double modulating_frequency = selected_osc->frequency;
 
         if ((selected_osc->wave_type & wave_type_t::sine)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_sine(modulating_frequency, time, volume, phase);
         }
         if ((selected_osc->wave_type & wave_type_t::triangle)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_triangle(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::square)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_square(time, volume, modulating_frequency);
         }
         if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-          frequency_offset +=
+          offset +=
               helper::pcm_saw_tooth(time, volume, modulating_frequency);
         }
-      }
 
-      if (modulation_amplitude <= 0.0) {
-        modulation_amplitude = 1.0;
-      }
+        if (modulation_amplitude <= 0.0) {
+          modulation_amplitude = 1.0;
+        }
 
-      frequency_offset /= volume;
-      frequency_offset *= modulation_amplitude;
+        offset /= volume;
+        offset *= modulation_amplitude;
+
+        switch (selected_osc->operator_type) {
+          case oscillator_type_t::frequency_modulation: {
+              frequency_offset = offset;
+              break;
+          }
+          case oscillator_type_t::phase_modulation: {
+              phase_offset = offset;
+              break;
+          }
+          case oscillator_type_t::amplitude_modulation: {
+              amplitude_offset = offset;
+              break;
+          }
+          default: {
+                throw std::invalid_argument("How is this possible?");
+          }                                           
+        }
+
+      }
 
       const auto wave_type =
           static_cast<uint8_t>(configuration.oscillator_c.wave_type);
@@ -1410,20 +1432,20 @@ namespace processing_functions { //TODO: This might need refactoring soon :)
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(configuration.oscillator_c.frequency +
                                        frequency_offset,
-                                   time, volume, phase);
+                                   time, volume + amplitude_offset, phase + phase_offset);
       }
       if ((wave_type & wave_type_t::triangle)) {
-        sample += helper::pcm_triangle(time, volume,
+        sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                        configuration.oscillator_c.frequency +
                                            frequency_offset);
       }
       if ((wave_type & wave_type_t::square)) {
-        sample += helper::pcm_square(time, volume,
+        sample += helper::pcm_square(time, volume + amplitude_offset,
                                      configuration.oscillator_c.frequency +
                                          frequency_offset);
       }
       if ((wave_type & wave_type_t::sawtooth)) {
-        sample += helper::pcm_saw_tooth(time, volume,
+        sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                         configuration.oscillator_c.frequency +
                                             frequency_offset);
       }
