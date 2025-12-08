@@ -31,6 +31,7 @@ int main(int arguments_size, char** arguments) {
 <img width="2268" height="190" alt="image" src="https://github.com/user-attachments/assets/293356ba-3ebd-47be-b062-50411e6b18f8" />
 
 ```
+
 #include <cstdint>
 #include <wave_t.hpp>
 #include <iostream>
@@ -123,11 +124,71 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
 
 # Supports
 
-DFT and IDFT for pitch detection or FM synthesis, it also supports calculating the DFT/IDFT async. This could be more optimized.
+DFT and IDFT for pitch detection or FM synthesis along with RM, AM, PM synthesis as partial and work in progress, it also supports calculating the DFT/IDFT async. This could be more optimized.
 
 Also supports adding samples by converting a frequency domain (a vector of complex numbers) to PCM samples (essentially the time domain of the signal).
 
 Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Support for applying bitcrusher effect. Still this header only library needs more improvent but its mostly working for now except the dft alogrithm. Either way always verify any code you will use in production.
+
+
+# Example of Ring Modulation (Work in Progress)
+
+```
+
+  wave_file_t synth_output;
+  synth_output.set_sample_rate(sample_rate);
+  synth_output.set_number_of_channels(1);
+  synth_output.set_bits_per_sample(
+      32); // Set it to 8-bit if you want that retro feel :p
+
+  synth_config_t configuration{};
+
+
+  constexpr const double E4_FREQUENCY{329.6276};
+
+  configuration.oscillator_a.operator_type = carrier;
+  configuration.oscillator_a.wave_type = wave_type_t::sine;
+  configuration.oscillator_a.frequency = C4_FREQUENCY;
+  configuration.oscillator_a.osc_to_modulate =
+      oscillator_selection_t::none_selected;
+
+  configuration.oscillator_b.operator_type = oscillator_type_t::ring_modulation;
+  configuration.oscillator_b.wave_type = wave_type_t::sine;
+  configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
+  configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_b.modulation_amplitude = 2.5;
+
+  configuration.oscillator_c.operator_type = oscillator_type_t::ring_modulation;
+  configuration.oscillator_c.wave_type = wave_type_t::sine;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 4;
+  configuration.oscillator_c.osc_to_modulate =
+      oscillator_selection_t::oscillator_b;
+  configuration.oscillator_c.modulation_amplitude = 2.5;
+
+  configuration.oscillator_d.operator_type = oscillator_type_t::ring_modulation;
+  configuration.oscillator_d.wave_type = wave_type_t::sine;
+  configuration.oscillator_d.frequency = C4_FREQUENCY * 1.25;
+  configuration.oscillator_d.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_d.modulation_amplitude = 2.5;
+
+   constexpr double seconds{5.25};
+
+  const size_t synth_sample_size =
+      static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+
+  if (synth_output.generate_synth(synth_sample_size, 0.60, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
+              << " dBFS is the peak of this generated super saw!!" << std::endl;
+    synth_output.save("synth_output.wav");
+  } else {
+    std::cout
+        << "Invalid synth configuration or failed to generate synth -- sorry."
+        << std::endl;
+  }
+
+  ```
 
 
 

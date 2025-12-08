@@ -73,10 +73,10 @@ int main(int arguments_size, char **arguments) {
   // supports mono or stereo for now
   output.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.6);
   if (!output.save("output.wav")) {
-   std::cout << "Failed to save 16-bit generated wav file" << std::endl;
+    std::cout << "Failed to save 16-bit generated wav file" << std::endl;
   }
 
-  //Try out 24-bit audio!
+  // Try out 24-bit audio!
   wave_file_t output24;
   output24.set_sample_rate(sample_rate);
   output24.set_number_of_channels(1);
@@ -85,14 +85,16 @@ int main(int arguments_size, char **arguments) {
   // supports mono or stereo for now
   output24.generate_wave(wave_type_t::sine, sample_size, C4_FREQUENCY, 0.6);
   if (!output24.save("output_24.wav")) {
-     std::cout << "Failed to save 24-bit generated wav file" << std::endl;
+    std::cout << "Failed to save 24-bit generated wav file" << std::endl;
   }
 
-  std::cout << "Finding fundamental frequency of D#5 Trumpet sample reference frequency is " << D5_FREQUENCY << std::endl;
+  std::cout << "Finding fundamental frequency of D#5 Trumpet sample reference "
+               "frequency is "
+            << D5_FREQUENCY << std::endl;
 
-  const char* input_path = "../samples/D#5_Trumpet.wav";
+  const char *input_path = "../samples/D#5_Trumpet.wav";
 
-  //Read output.wav from our earlier example
+  // Read output.wav from our earlier example
   wave_file_t input(input_path);
 
   if (!input) {
@@ -102,18 +104,23 @@ int main(int arguments_size, char **arguments) {
     return 1;
   }
 
-  std::cout << "\033[01;33m" << input.get_readable_wave_header() << "\033[0m" << std::endl
+  std::cout << "\033[01;33m" << input.get_readable_wave_header() << "\033[0m"
+            << std::endl
             << "number_of_samples=" << input.sample_size() << std::endl;
 
-  const size_t dft_sample_size = input.sample_size(); // NOTE: Larger values means slower time since this is a slow dft implementation
+  const size_t dft_sample_size =
+      input.sample_size(); // NOTE: Larger values means slower time since this
+                           // is a slow dft implementation
   const bool async =
-    true; // DFT can be calculated asynchronously may help performance
+      true; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
   double max = std::numeric_limits<float>::min();
 
-  const size_t max_frequency_index = input.get_nyquist_frequency(); // Nyquist limit means we can't go beyond the half the sample size or so I think
+  const size_t max_frequency_index =
+      input.get_nyquist_frequency(); // Nyquist limit means we can't go beyond
+                                     // the half the sample size or so I think
   std::cout << "The nyquist frequency is " << max_frequency_index << std::endl;
   for (size_t frequency = 0; frequency < max_frequency_index; frequency++) {
     float magnitude = std::norm(frequency_domain[frequency]);
@@ -123,18 +130,18 @@ int main(int arguments_size, char **arguments) {
     }
   }
 
-
   double fundamental_frequency = (static_cast<float>(detected_frequency_index) *
-                  (static_cast<float>(sample_rate) /
-                   (static_cast<float>(dft_sample_size))));
+                                  (static_cast<float>(sample_rate) /
+                                   (static_cast<float>(dft_sample_size))));
 
-  double percent_error = (100.0 * std::abs((fundamental_frequency - D5_FREQUENCY) / D5_FREQUENCY));
+  double percent_error =
+      (100.0 * std::abs((fundamental_frequency - D5_FREQUENCY) / D5_FREQUENCY));
 
   std::cout << "Index: " << detected_frequency_index << std::endl;
-  std::cout << "\033[01;32mFundamental frequency: "
-            << fundamental_frequency
+  std::cout << "\033[01;32mFundamental frequency: " << fundamental_frequency
             << "\033[0m\033[01;31m "
-            << "(percent error is " << percent_error << " %) \033[0m" << std::endl;
+            << "(percent error is " << percent_error << " %) \033[0m"
+            << std::endl;
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
@@ -145,13 +152,14 @@ int main(int arguments_size, char **arguments) {
   output.set_bits_per_sample(16);
   output.save("idft_output.wav");
 
-  std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.626 HZ)"
-            << std::endl;
+  std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT
+            << "osc ) at C4 (261.626 HZ)" << std::endl;
 
   wave_file_t synth_output;
   synth_output.set_sample_rate(sample_rate);
   synth_output.set_number_of_channels(1);
-  synth_output.set_bits_per_sample(32); // Set it to 8-bit if you want that retro feel :p
+  synth_output.set_bits_per_sample(
+      32); // Set it to 8-bit if you want that retro feel :p
 
   synth_config_t configuration{};
 
@@ -164,54 +172,66 @@ int main(int arguments_size, char **arguments) {
 
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_a.frequency = C4_FREQUENCY * (1.0 - (0.88997686 * detune(detune_amount)));
+  configuration.oscillator_a.frequency =
+      C4_FREQUENCY * (1.0 - (0.88997686 * detune(detune_amount)));
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
   configuration.oscillator_b.operator_type = carrier;
   configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_b.frequency = C4_FREQUENCY * (1.0 - (0.93711560 * detune(detune_amount)));
-  configuration.oscillator_b.osc_to_modulate = oscillator_selection_t::none_selected;
+  configuration.oscillator_b.frequency =
+      C4_FREQUENCY * (1.0 - (0.93711560 * detune(detune_amount)));
+  configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::none_selected;
 
   configuration.oscillator_c.operator_type = carrier;
   configuration.oscillator_c.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_c.frequency = C4_FREQUENCY * (1.0 - (0.98047643 * detune(detune_amount)));
+  configuration.oscillator_c.frequency =
+      C4_FREQUENCY * (1.0 - (0.98047643 * detune(detune_amount)));
   configuration.oscillator_c.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
   configuration.oscillator_d.operator_type = carrier;
   configuration.oscillator_d.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_d.frequency = C4_FREQUENCY;
-  configuration.oscillator_d.osc_to_modulate = oscillator_selection_t::none_selected;
+  configuration.oscillator_d.osc_to_modulate =
+      oscillator_selection_t::none_selected;
 
-   configuration.oscillator_e.operator_type = carrier;
+  configuration.oscillator_e.operator_type = carrier;
   configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_e.frequency = C4_FREQUENCY * (1.0 - (1.01991221 * detune(detune_amount)));
+  configuration.oscillator_e.frequency =
+      C4_FREQUENCY * (1.0 - (1.01991221 * detune(detune_amount)));
   configuration.oscillator_e.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
   configuration.oscillator_f.operator_type = carrier;
   configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_f.frequency = C4_FREQUENCY * (1.0 - (1.06216538 * detune(detune_amount)));
+  configuration.oscillator_f.frequency =
+      C4_FREQUENCY * (1.0 - (1.06216538 * detune(detune_amount)));
   configuration.oscillator_f.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
   configuration.oscillator_g.operator_type = carrier;
   configuration.oscillator_g.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_g.frequency = C4_FREQUENCY * (1.0 - (1.10745242 * detune(detune_amount)));
+  configuration.oscillator_g.frequency =
+      C4_FREQUENCY * (1.0 - (1.10745242 * detune(detune_amount)));
   configuration.oscillator_g.osc_to_modulate =
       oscillator_selection_t::none_selected;
-  
-  constexpr double seconds{1.25};
 
-  const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+  constexpr const double seconds{1.25};
 
-  //Uncomment if you want to apply bitcrusher :)
-  //synth_output.apply_bitcrusher_effect();
-  if (synth_output.generate_synth(synth_sample_size,  0.13, configuration)) {
-    std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
+  const size_t synth_sample_size =
+      static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+
+  // Uncomment if you want to apply bitcrusher :)
+  // synth_output.apply_bitcrusher_effect();
+  constexpr const double volume{0.13};
+  if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
+              << " dBFS is the peak of this generated super saw!!" << std::endl;
     /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
-        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << " dBFS" << std::endl;
+        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << "
+    dBFS" << std::endl;
     }*/
     synth_output.save("synth_output.wav");
   } else {
@@ -225,7 +245,7 @@ int main(int arguments_size, char **arguments) {
       << std::endl;
 #else
 
-  constexpr const double E4_FREQUENCY = 329.6276;
+  constexpr const double E4_FREQUENCY{329.6276};
 
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sine;
@@ -233,45 +253,54 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
-  configuration.oscillator_b.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_b.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_b.wave_type = wave_type_t::sine;
   configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
-  configuration.oscillator_b.osc_to_modulate = oscillator_selection_t::oscillator_a;
-  configuration.oscillator_b.modulation_amplitude = 10.0;
+  configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_b.modulation_amplitude = 2.5;
 
-  configuration.oscillator_c.operator_type = oscillator_type_t::amplitude_modulation;
+  configuration.oscillator_c.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_c.wave_type = wave_type_t::sine;
-  configuration.oscillator_c.frequency = C4_FREQUENCY * 16.0;
-  configuration.oscillator_c.osc_to_modulate = oscillator_selection_t::oscillator_b;
-  configuration.oscillator_c.modulation_amplitude = 10.0;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 4;
+  configuration.oscillator_c.osc_to_modulate =
+      oscillator_selection_t::oscillator_b;
+  configuration.oscillator_c.modulation_amplitude = 2.5;
 
-  configuration.oscillator_d.operator_type = oscillator_type_t::amplitude_modulation;
+  configuration.oscillator_d.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_d.wave_type = wave_type_t::sine;
-  configuration.oscillator_d.frequency = C4_FREQUENCY * 16.0;
-  configuration.oscillator_d.osc_to_modulate = oscillator_selection_t::oscillator_a;
-  configuration.oscillator_d.modulation_amplitude = 5.0;
+  configuration.oscillator_d.frequency = C4_FREQUENCY * 1.25;
+  configuration.oscillator_d.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_d.modulation_amplitude = 2.5;
 
-  configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
-  configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_e.frequency = E4_FREQUENCY;
-  configuration.oscillator_e.osc_to_modulate = oscillator_selection_t::none_selected;
+  // configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
+  // configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
+  // configuration.oscillator_e.frequency = E4_FREQUENCY;
+  // configuration.oscillator_e.osc_to_modulate =
+  // oscillator_selection_t::none_selected;
 
-  // configuration.oscillator_f.operator_type = oscillator_type_t::amplitude_modulation;
-  // configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
-  // configuration.oscillator_f.frequency = E4_FREQUENCY * 8;
-  // configuration.oscillator_f.osc_to_modulate = oscillator_selection_t::oscillator_e;
-  // configuration.oscillator_d.modulation_amplitude = 5.0;
+  // configuration.oscillator_f.operator_type =
+  // oscillator_type_t::ring_modulation; configuration.oscillator_f.wave_type =
+  // wave_type_t::sawtooth; configuration.oscillator_f.frequency = E4_FREQUENCY
+  // * 8; configuration.oscillator_f.osc_to_modulate =
+  // oscillator_selection_t::oscillator_e;
+  // configuration.oscillator_d.modulation_amplitude = 2.5;
 
-  constexpr double seconds{5.25};
+  constexpr const double seconds{5.25};
 
-  const size_t synth_sample_size = static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+  const size_t synth_sample_size =
+      static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
-  //Uncomment if you want to apply bitcrusher :)
-  //synth_output.apply_bitcrusher_effect();
-  if (synth_output.generate_synth(synth_sample_size,  0.60, configuration)) {
-    std::cout << synth_output.get_peak_decibel_fullscale_of_signal() << " dBFS is the peak of this generated super saw!!" << std::endl;
+  // Uncomment if you want to apply bitcrusher :)
+  // synth_output.apply_bitcrusher_effect();
+  constexpr const double volume{0.15};
+  if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
+              << " dBFS is the peak of this generated super saw!!" << std::endl;
     /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
-        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << " dBFS" << std::endl;
+        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << "
+    dBFS" << std::endl;
     }*/
     synth_output.save("synth_output.wav");
   } else {
@@ -286,5 +315,4 @@ int main(int arguments_size, char **arguments) {
 #endif
 
   return 0;
-
 }
