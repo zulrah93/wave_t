@@ -1411,6 +1411,12 @@ std::vector<int32_t> osciallator_b(const size_t &sample_size,
                                           frequency_offset);
     }
 
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
+    }
+
     time += (1.0 / static_cast<double>(sample_rate));
     samples.push_back(sample);
   }
@@ -1548,6 +1554,12 @@ std::vector<int32_t> osciallator_c(const size_t &sample_size,
       sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                       configuration.oscillator_c.frequency +
                                           frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
     }
 
     time += (1.0 / static_cast<double>(sample_rate));

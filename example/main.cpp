@@ -164,7 +164,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Ucomment line below to get alternative synth demo")
-//#define AM_PM_MODULATION_DEMO
+#define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
@@ -258,21 +258,21 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
   configuration.oscillator_b.osc_to_modulate =
       oscillator_selection_t::oscillator_a;
-  configuration.oscillator_b.modulation_amplitude = 2.5;
+  configuration.oscillator_b.modulation_amplitude = 0.75;
 
   configuration.oscillator_c.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_c.wave_type = wave_type_t::sine;
-  configuration.oscillator_c.frequency = C4_FREQUENCY * 4;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 1.5;
   configuration.oscillator_c.osc_to_modulate =
-      oscillator_selection_t::oscillator_b;
-  configuration.oscillator_c.modulation_amplitude = 2.5;
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_c.modulation_amplitude = 0.5;
 
   configuration.oscillator_d.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_d.wave_type = wave_type_t::sine;
   configuration.oscillator_d.frequency = C4_FREQUENCY * 1.25;
   configuration.oscillator_d.osc_to_modulate =
       oscillator_selection_t::oscillator_a;
-  configuration.oscillator_d.modulation_amplitude = 2.5;
+  configuration.oscillator_d.modulation_amplitude = 0.5;
 
   // configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
   // configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
@@ -294,7 +294,7 @@ int main(int arguments_size, char **arguments) {
 
   // Uncomment if you want to apply bitcrusher :)
   // synth_output.apply_bitcrusher_effect();
-  constexpr const double volume{0.15};
+  constexpr const double volume{0.50};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
