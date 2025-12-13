@@ -29,6 +29,7 @@
 #ifndef WAVE_T_HPP
 #define WAVE_T_HPP
 
+#include <cfenv>
 #include <bit>
 #include <climits>
 #include <cmath>
@@ -224,11 +225,16 @@ void discrete_fourier_transform_async(
 // value where 0 dB is like the max and beyond that is essenitally clipping
 // Refer to: https://en.wikipedia.org/wiki/DBFS
 constexpr double
-get_decibel_fullscale_from_sample(const int32_t sample,
+get_decibel_fullscale_from_sample(const int64_t sample,
                                   const int32_t max_sample_value) {
-  return std::log10(std::abs(static_cast<double>(sample)) /
-                    static_cast<double>(max_sample_value)) *
-         20.0;
+  auto ratio = std::abs(static_cast<double>(sample)) / static_cast<double>(max_sample_value);
+  auto original_rounding_method = std::fegetround();
+  std::fesetround(FE_TOWARDZERO);
+  auto dbfs = ratio > 0.98 ? 
+    (std::floor((100.0 * std::log10(ratio) * 20.0) / 2.0) / 100.0) 
+                                                  : (std::log10(ratio) * 20.0);
+  std::fesetround(original_rounding_method);
+  return dbfs;
 }
 
 } // namespace helper
@@ -437,7 +443,7 @@ public:
           const size_t bytes_size = m_header.sub_chunk_2_size;
           const uint8_t *bytes = &temp_buffer[sizeof(wave_header_t)];
           int8_t count = 0;
-          int32_t constructed_24_bit_sample{};
+          int64_t constructed_24_bit_sample{};
           for (size_t index = 0; index < bytes_size; index++) {
             if (count == 0) {
               constructed_24_bit_sample |= bytes[index];
@@ -579,9 +585,9 @@ public:
   // of wav file could be -20 db FS (pretty low sounding relative to a 0 dB FS
   // signal)
   double get_peak_decibel_fullscale_of_signal(void) {
-    int32_t peak_sample = INT32_MIN;
-    const double max_sample_value =
-        static_cast<double>(get_maximum_sample_value());
+    int64_t peak_sample = INT64_MIN;
+    const int32_t max_sample_value =
+        static_cast<int32_t>(get_maximum_sample_value());
     for (auto &sample : m_samples) {
       if (sample > peak_sample) {
         peak_sample = sample;
@@ -720,7 +726,7 @@ public:
     auto wave_g = osc_g_carrier_future.get();
 
     for (size_t index{}; index < sample_size; index++) {
-      int32_t sample{};
+      int64_t sample{};
       double frequency_offset = 0.0;
 
       if (index < wave_a.size()) {
@@ -832,7 +838,7 @@ public:
         volume_percent / static_cast<double>(wave_count), max_sample_value);
 
     for (size_t _ = 0ul; _ < sample_size; _++) {
-      int32_t sample{};
+      int64_t sample{};
       if ((wave_type & wave_type_t::sine)) {
         sample += helper::pcm_sine(frequency, time, volume, phase);
       }
@@ -1027,7 +1033,7 @@ private:
 
   bool save_as_16_bits(const std::string &file_path) {
     std::vector<int16_t> samples;
-    samples.reserve(sizeof(int16_t) * m_samples.size());
+    samples.reserve(m_samples.size());
     for (auto &sample : m_samples) {
       samples.push_back(static_cast<int16_t>(sample));
     }
@@ -1077,6 +1083,11 @@ private:
   }
 
   bool save_as_32_bits(const std::string &file_path) {
+    std::vector<int32_t> samples;
+    samples.reserve(m_samples.size());
+    for (auto &sample : m_samples) {
+      samples.push_back(static_cast<int32_t>(sample));
+    }
     auto wav_file_handle = fopen(file_path.c_str(), "wb");
     if (nullptr == wav_file_handle) {
       return false;
@@ -1086,8 +1097,8 @@ private:
     size_t written_bytes =
         fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
                sizeof(m_header), wav_file_handle);
-    written_bytes += (fwrite(m_samples.data(), sizeof(int32_t),
-                             m_samples.size(), wav_file_handle) *
+    written_bytes += (fwrite(samples.data(), sizeof(int32_t),
+                             samples.size(), wav_file_handle) *
                       sizeof(int32_t));
     fclose(wav_file_handle);
     return written_bytes == expected_bytes;
@@ -1110,15 +1121,14 @@ private:
       break;
     default:
       max_sample_value = static_cast<size_t>(
-          CHAR_MAX); // We don't support 32-bit yet but we could nothing
-      // stopping it since the wav spec supports it
+          CHAR_MAX); 
       break;
     }
     return max_sample_value;
   }
 
   wave_header_t m_header;
-  std::vector<int32_t> m_samples;
+  std::vector<int64_t> m_samples;
   bool m_apply_bitcrusher_effect{false};
   size_t m_sink_index{0ul};
 };
@@ -1138,12 +1148,13 @@ std::vector<int32_t> osciallator_a(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double offset{};
     double frequency_offset{};
     double phase_offset{};
     double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -1210,8 +1221,6 @@ std::vector<int32_t> osciallator_a(const size_t &sample_size,
 
       offset /= volume;
       offset *= modulation_amplitude;
-
-      bool ring_modulation{false};
 
       switch (selected_osc->operator_type) {
       case oscillator_type_t::frequency_modulation: {
@@ -1285,12 +1294,13 @@ std::vector<int32_t> osciallator_b(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double offset{};
     double frequency_offset{};
     double phase_offset{};
     double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -1361,8 +1371,6 @@ std::vector<int32_t> osciallator_b(const size_t &sample_size,
 
       offset /= volume;
       offset *= modulation_amplitude;
-
-      bool ring_modulation{false};
 
       switch (selected_osc->operator_type) {
       case oscillator_type_t::frequency_modulation: {
@@ -1435,12 +1443,13 @@ std::vector<int32_t> osciallator_c(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double offset{};
     double frequency_offset{};
     double phase_offset{};
     double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
       oscillator_config_t *selected_osc = nullptr;
       switch (osc_index) {
@@ -1506,8 +1515,6 @@ std::vector<int32_t> osciallator_c(const size_t &sample_size,
 
       offset /= volume;
       offset *= modulation_amplitude;
-
-      bool ring_modulation{false};
 
       switch (selected_osc->operator_type) {
       case oscillator_type_t::frequency_modulation: {
@@ -1580,9 +1587,13 @@ std::vector<int32_t> osciallator_d(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
-    double frequency_offset = 0.0;
+    int64_t sample{};
+    double offset{};
+    double frequency_offset{};
+    double phase_offset{};
+    double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -1630,37 +1641,55 @@ std::vector<int32_t> osciallator_d(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        frequency_offset +=
-            helper::pcm_sine(modulating_frequency, time, volume, phase);
+        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        frequency_offset +=
-            helper::pcm_triangle(time, volume, modulating_frequency);
+        offset += helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        frequency_offset +=
-            helper::pcm_square(time, volume, modulating_frequency);
+        offset += helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        frequency_offset +=
-            helper::pcm_saw_tooth(time, volume, modulating_frequency);
+        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
+      }
+
+      if (modulation_amplitude <= 0.0) {
+        modulation_amplitude = 1.0;
+      }
+
+      offset /= volume;
+      offset *= modulation_amplitude;
+
+      switch (selected_osc->operator_type) {
+      case oscillator_type_t::frequency_modulation: {
+        frequency_offset = offset;
+        break;
+      }
+      case oscillator_type_t::phase_modulation: {
+        phase_offset = offset;
+        break;
+      }
+      case oscillator_type_t::amplitude_modulation: {
+        amplitude_offset = offset;
+        break;
+      }
+      case oscillator_type_t::ring_modulation: {
+        ring_modulation = true;
+        break;
+      }
+      default: {
+        throw std::invalid_argument("How is this possible?");
+      }
       }
     }
-
-    if (modulation_amplitude <= 0.0) {
-      modulation_amplitude = 1.0;
-    }
-
-    frequency_offset /= volume;
-    frequency_offset *= modulation_amplitude;
 
     const auto wave_type =
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
-      sample += helper::pcm_sine(configuration.oscillator_d.frequency +
-                                     frequency_offset,
-                                 time, volume, phase);
+      sample += helper::pcm_sine(
+          configuration.oscillator_d.frequency + frequency_offset, time,
+          volume + amplitude_modulation, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume,
@@ -1676,6 +1705,12 @@ std::vector<int32_t> osciallator_d(const size_t &sample_size,
       sample += helper::pcm_saw_tooth(time, volume,
                                       configuration.oscillator_d.frequency +
                                           frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
     }
 
     time += (1.0 / static_cast<double>(sample_rate));
@@ -1696,7 +1731,7 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double frequency_offset = 0.0;
     double modulation_amplitude{};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
@@ -1812,7 +1847,7 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double frequency_offset = 0.0;
     double modulation_amplitude{};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
@@ -1928,7 +1963,7 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
   double phase{};
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
-    int32_t sample{};
+    int64_t sample{};
     double frequency_offset = 0.0;
     double modulation_amplitude{};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
