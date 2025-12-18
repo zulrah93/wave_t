@@ -68,12 +68,15 @@ int main(int arguments_size, char **arguments) {
   output.set_sample_rate(sample_rate);
   output.set_number_of_channels(1);
   output.set_bits_per_sample(16);
-  const size_t sample_size = 44100 * 60 * 5; // 5 minutes of 16-bit PCM sample
+  const size_t sample_size = sample_rate * 60 * 5; // 5 minutes of 16-bit PCM sample
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
   output.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.6);
   if (!output.save("output.wav")) {
     std::cout << "Failed to save 16-bit generated wav file" << std::endl;
+  }
+  if (!output.save_waveform_as_grayscale_pbm("sine.pbm")) {
+        std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
   }
 
   // Try out 24-bit audio!
@@ -294,21 +297,23 @@ int main(int arguments_size, char **arguments) {
       oscillator_selection_t::oscillator_d;
   configuration.oscillator_g.modulation_amplitude = 2.5;
 
-  constexpr const double seconds{5.25};
+  constexpr const double seconds{1.25};
 
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
-  synth_output.apply_bitcrusher_effect();
+  //synth_output.apply_bitcrusher_effect();
   constexpr const double volume{0.60};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
-    /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
-        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << "
-    dBFS" << std::endl;
-    }*/
+    if (!synth_output.save_waveform_as_grayscale_pbm("synth.pbm")) {
+            std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
+    }
+    else {
+        std::cout << "Checkout the groovy waveform visually!" << std::endl;
+    }
     synth_output.save("synth_output.wav");
   } else {
     std::cout
