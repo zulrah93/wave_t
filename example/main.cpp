@@ -146,6 +146,10 @@ int main(int arguments_size, char **arguments) {
             << "(percent error is " << percent_error << " %) \033[0m"
             << std::endl;
 
+  if (input.save_waveform_as_grayscale_pbm("d#5_trumpet.pbm")) {
+        std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
+  }
+
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
 
