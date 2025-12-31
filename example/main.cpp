@@ -255,8 +255,8 @@ int main(int arguments_size, char **arguments) {
   constexpr const double E4_FREQUENCY{329.6276};
 
   configuration.oscillator_a.operator_type = carrier;
-  configuration.oscillator_a.wave_type = wave_type_t::sine;
-  configuration.oscillator_a.frequency = C4_FREQUENCY;
+  configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_a.frequency = C4_FREQUENCY * 2;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
@@ -283,7 +283,7 @@ int main(int arguments_size, char **arguments) {
 
   configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_e.frequency = E4_FREQUENCY;
+  configuration.oscillator_e.frequency = E4_FREQUENCY * 4;
   configuration.oscillator_e.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
@@ -301,14 +301,14 @@ int main(int arguments_size, char **arguments) {
       oscillator_selection_t::oscillator_d;
   configuration.oscillator_g.modulation_amplitude = 2.5;
 
-  constexpr const double seconds{1.25};
+  constexpr const double seconds{1.55};
 
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
   //synth_output.apply_bitcrusher_effect();
-  constexpr const double volume{0.60};
+  constexpr const double volume{0.55};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
