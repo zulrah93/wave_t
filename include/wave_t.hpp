@@ -961,7 +961,7 @@ public:
 
   void apply_no_effect(void) { m_apply_bitcrusher_effect = false; }
 
-  bool save_waveform_as_monochrome_bpm(const std::string& file_path) {
+  bool save_waveform_as_monochrome_bmp(const std::string& file_path) {
       if (file_path.empty()) {
           return false;
       }
@@ -972,8 +972,27 @@ public:
 
       const size_t width = m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate);
       const size_t height{128};
+
+      std::future<std::vector<std::vector<bool>>> bitmap_future = std::async(std::launch::async, [&]() {
+        std::vector<std::vector<bool>> bitmap;
+        for (size_t _ = 0; _ < height; _++) {
+            bitmap.emplace_back(width, false);
+        }
+        for (size_t column = 0; column < width; column++) {
+          size_t row = static_cast<size_t>(static_cast<double>(height) * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
+          if (row >= height) {
+              continue;
+          }
+          bitmap[row][column] = true;
+          for(row += 1; row < height; row++) {
+              bitmap[row][column] = true;
+          }
+        }
+        return bitmap;
+      });
+
       std::vector<uint8_t> bytes;
-      bytes.reserve(width * height * 4); // 3 bytes per pixel but I am reserving for a 4 byte boundary
+      bytes.reserve(width * height * 4);
       bitmap_header_t header{};
       header.magic_field[0] = 'B';
       header.magic_field[1] = 'M';
@@ -994,6 +1013,9 @@ public:
       if (nullptr == waveform_file_handle) {
         return false;
       }
+
+      header.data_size = sizeof(bitmap_header_t) + (width * height * 4);
+      std::cout << "data_size=" << header.data_size << std::endl;
      
       size_t expected_bytes = sizeof(header);
       size_t written_bytes =
@@ -1004,8 +1026,32 @@ public:
           return false;
       }
 
-      
+      auto bitmap = bitmap_future.get();
 
+      for(auto& row : bitmap) {
+          for(bool column : row) {
+              if (column) { // If this x y is set to true then we insert a black pixel (0x00 0x00 0x00 0xFF)
+                  bytes.push_back(0x00);
+                  bytes.push_back(0x00);
+                  bytes.push_back(0x00);
+                  bytes.push_back(0xff);
+              }
+              else { // Draw default white pixel (0xff 0xff 0xff 0xff)
+                  bytes.push_back(0xff);
+                  bytes.push_back(0xff);
+                  bytes.push_back(0xff);
+                  bytes.push_back(0xff);
+              }
+          }
+      }
+
+      expected_bytes += bytes.size();
+      written_bytes +=
+          fwrite(bytes.data(), sizeof(uint8_t),
+                bytes.size(), waveform_file_handle);
+     
+      return expected_bytes == written_bytes;
+      
   }
 
   bool save_waveform_as_grayscale_pbm(const std::string& file_path) { //Function is slow even as async use above function windows bitmap -- this is just for legacy fun :)
@@ -1071,6 +1117,8 @@ public:
       size_t written_bytes =
           fwrite(data.data(), sizeof(int8_t),
                 data.size(), waveform_file_handle);
+
+      fclose(waveform_file_handle);
      
       return expected_bytes == written_bytes;
   }
@@ -1123,7 +1171,7 @@ private:
       uint32_t vertical_resolution;
       uint32_t color_pallete_count;
       uint32_t important_colors_used;
-  };
+  } __attribute__((packed));;
 
   // Used for saving 24-bit audio -- custom type
   struct int24_t {

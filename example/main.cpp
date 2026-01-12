@@ -75,8 +75,9 @@ int main(int arguments_size, char **arguments) {
   if (!output.save("output.wav")) {
     std::cout << "Failed to save 16-bit generated wav file" << std::endl;
   }
-  if (!output.save_waveform_as_grayscale_pbm("sine.pbm")) {
-        std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
+
+  if (!output.save_waveform_as_monochrome_bmp("sine.bmp")) {
+        std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
 
   // Try out 24-bit audio!
@@ -146,8 +147,8 @@ int main(int arguments_size, char **arguments) {
             << "(percent error is " << percent_error << " %) \033[0m"
             << std::endl;
 
-  if (input.save_waveform_as_grayscale_pbm("d#5_trumpet.pbm")) {
-        std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
+  if (input.save_waveform_as_monochrome_bmp("d#5_trumpet.bmp")) {
+        std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
@@ -236,10 +237,12 @@ int main(int arguments_size, char **arguments) {
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
-    /*for(size_t index = 0; index < (synth_sample_size / 16); index++) {
-        std::cout << synth_output.index_as_dBFS(index).value_or(-144.0) << "
-    dBFS" << std::endl;
-    }*/
+    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp")) {
+            std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
+    }
+    else {
+        std::cout << "Checkout the groovy waveform visually!" << std::endl;
+    }
     synth_output.save("synth_output.wav");
   } else {
     std::cout
@@ -312,8 +315,8 @@ int main(int arguments_size, char **arguments) {
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
-    if (!synth_output.save_waveform_as_grayscale_pbm("synth.pbm")) {
-            std::cout << "Failed to save generated grayscale portable bitmap of wav file!" << std::endl;
+    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp")) {
+            std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
     }
     else {
         std::cout << "Checkout the groovy waveform visually!" << std::endl;
