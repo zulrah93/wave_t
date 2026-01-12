@@ -130,6 +130,7 @@ Also supports adding samples by converting a frequency domain (a vector of compl
 
 Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Support for applying bitcrusher effect. Still this header only library needs more improvent but its mostly working for now except the dft alogrithm. Either way always verify any code you will use in production.
 
+The library also generates portable bitmaps of the waveforms with windows bitmap support in the future.
 
 # Example of Ring Modulation (Work in Progress)
 
