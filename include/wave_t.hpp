@@ -961,7 +961,54 @@ public:
 
   void apply_no_effect(void) { m_apply_bitcrusher_effect = false; }
 
-  bool save_waveform_as_grayscale_pbm(const std::string& file_path) { //Function is slow even as async
+  bool save_waveform_as_monochrome_bpm(const std::string& file_path) {
+      if (file_path.empty()) {
+          return false;
+      }
+
+      if (m_samples.empty()) {
+          return false;
+      }
+
+      const size_t width = m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate);
+      const size_t height{128};
+      std::vector<uint8_t> bytes;
+      bytes.reserve(width * height * 4); // 3 bytes per pixel but I am reserving for a 4 byte boundary
+      bitmap_header_t header{};
+      header.magic_field[0] = 'B';
+      header.magic_field[1] = 'M';
+      header.offset_to_pixels = sizeof(bitmap_header_t);
+      header.header_size = 40;
+      header.width = width;
+      header.height = height;
+      header.plane_count = 1;
+      header.bits_per_pixel = 32;
+      header.compression_method = 0; // No compression just store the 3 byte rgb values
+      header.horizontal_resolution = 1;
+      header.vertical_resolution = 1;
+      header.color_pallete_count = 0;
+      header.important_colors_used = 0;
+
+      auto waveform_file_handle = fopen(file_path.c_str(), "wb");
+     
+      if (nullptr == waveform_file_handle) {
+        return false;
+      }
+     
+      size_t expected_bytes = sizeof(header);
+      size_t written_bytes =
+          fwrite(reinterpret_cast<uint8_t*>(&header), sizeof(uint8_t),
+                sizeof(header), waveform_file_handle);
+     
+      if (expected_bytes != written_bytes) {
+          return false;
+      }
+
+      
+
+  }
+
+  bool save_waveform_as_grayscale_pbm(const std::string& file_path) { //Function is slow even as async use above function windows bitmap -- this is just for legacy fun :)
       
      if (file_path.empty()) {
           return false;
@@ -1058,6 +1105,27 @@ public:
 #endif
 
 private:
+  // Used for saving wave forms as bitmaps
+  // Source: https://en.wikipedia.org/wiki/BMP_file_format
+  struct bitmap_header_t {
+      char magic_field[2];
+      uint32_t bitmap_total_size;
+      uint32_t reserved;
+      uint32_t offset_to_pixels;
+      uint32_t header_size;
+      int32_t width;
+      int32_t height;
+      uint16_t plane_count;
+      uint16_t bits_per_pixel;
+      uint32_t compression_method;
+      uint32_t data_size;
+      uint32_t horizontal_resolution;
+      uint32_t vertical_resolution;
+      uint32_t color_pallete_count;
+      uint32_t important_colors_used;
+  };
+
+  // Used for saving 24-bit audio -- custom type
   struct int24_t {
     int8_t byte1;
     int8_t byte2;
