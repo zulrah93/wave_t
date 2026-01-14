@@ -1015,7 +1015,6 @@ public:
       }
 
       header.data_size = sizeof(bitmap_header_t) + (width * height * 4);
-      std::cout << "data_size=" << header.data_size << std::endl;
      
       size_t expected_bytes = sizeof(header);
       size_t written_bytes =
@@ -1031,10 +1030,10 @@ public:
       for(auto& row : bitmap) {
           for(bool column : row) {
               if (column) { // If this x y is set to true then we insert a black pixel (0x00 0x00 0x00 0xFF)
-                  bytes.push_back(0x00);
-                  bytes.push_back(0x00);
-                  bytes.push_back(0x00);
                   bytes.push_back(0xff);
+                  bytes.push_back(0x00);
+                  bytes.push_back(0x00);
+                  bytes.push_back(0x00);
               }
               else { // Draw default white pixel (0xff 0xff 0xff 0xff)
                   bytes.push_back(0xff);
@@ -1044,6 +1043,8 @@ public:
               }
           }
       }
+
+      std::reverse(bytes.begin(), bytes.end());
 
       expected_bytes += bytes.size();
       written_bytes +=
