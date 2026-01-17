@@ -62,7 +62,7 @@ constexpr auto PCM = 1;
 constexpr size_t EXTRA_PARAM_SIZE_OFFSET{35};
 constexpr uint32_t BITCRUSHER_AMP_VALUE_16_BIT{15};
 constexpr uint32_t BITCRUSHER_AMP_VALUE_24_BIT{16};
-constexpr uint32_t BITCRUSHER_AMP_VALUE_32_BIT{1};
+constexpr uint32_t BITCRUSHER_AMP_VALUE_32_BIT{2};
 constexpr auto _8_BITS_PER_SAMPLE{8};
 constexpr auto _16_BITS_PER_SAMPLE{16};
 constexpr auto _24_BITS_PER_SAMPLE{24};
@@ -790,16 +790,16 @@ public:
         break;
       case _32_BITS_PER_SAMPLE:
         !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample)
                    : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample,
                                            m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample);
         break;
       default:
@@ -890,16 +890,16 @@ public:
         break;
       case _32_BITS_PER_SAMPLE:
         !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample)
                    : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample,
                                            m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_32_BIT *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * 0.88)))
+                                               ? (m_bitcrusher_amp_value *
+                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
                                                : sample);
         break;
       default:
@@ -959,7 +959,26 @@ public:
 
   void apply_bitcrusher_effect() { m_apply_bitcrusher_effect = true; }
 
-  void apply_no_effect(void) { m_apply_bitcrusher_effect = false; }
+  void apply_no_effect(void) { m_apply_bitcrusher_effect = false; m_bitcrusher_wet_percent = 1.0; }
+
+  // 1.0 means apply no effect while less applies more it's weird I know :P
+  void set_bitcrusher_wet_percentage(double percentage) {
+      if (percentage < 0.0 || percentage > 1.0) {
+          percentage = 1.0;
+      }
+      if (m_apply_bitcrusher_effect) {
+        m_bitcrusher_wet_percent = percentage;
+      }
+  }
+
+  void set_bitcrusher_amp_value(double value) {
+      if (value < 0.0) {
+          value = 0.0;
+      }
+      if (m_apply_bitcrusher_effect) {
+          m_bitcrusher_amp_value = value;
+      }
+  }
 
   bool save_waveform_as_monochrome_bmp(const std::string& file_path) {
       if (file_path.empty()) {
@@ -970,7 +989,7 @@ public:
           return false;
       }
 
-      const size_t width = m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate);
+      const size_t width = (m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
       const size_t height{128};
 
       std::future<std::vector<std::vector<bool>>> bitmap_future = std::async(std::launch::async, [&]() {
@@ -1315,6 +1334,8 @@ private:
   wave_header_t m_header;
   std::vector<int64_t> m_samples;
   bool m_apply_bitcrusher_effect{false};
+  double m_bitcrusher_wet_percent{1};
+  double m_bitcrusher_amp_value{1.0};
   size_t m_sink_index{0ul};
 };
 
