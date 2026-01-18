@@ -58,20 +58,17 @@ constexpr auto RIFF_ASCII = std::byteswap(0x52494646);
 constexpr auto WAVE_ASCII = std::byteswap(0x57415645);
 constexpr auto FMT_ASCII = std::byteswap(0x666d7420);
 constexpr auto DATA_ASCII = std::byteswap(0x64617461);
-constexpr auto PCM = 1;
+constexpr auto PCM{1};
 constexpr size_t EXTRA_PARAM_SIZE_OFFSET{35};
-constexpr uint32_t BITCRUSHER_AMP_VALUE_16_BIT{15};
-constexpr uint32_t BITCRUSHER_AMP_VALUE_24_BIT{16};
-constexpr uint32_t BITCRUSHER_AMP_VALUE_32_BIT{2};
 constexpr auto _8_BITS_PER_SAMPLE{8};
 constexpr auto _16_BITS_PER_SAMPLE{16};
 constexpr auto _24_BITS_PER_SAMPLE{24};
 constexpr auto _32_BITS_PER_SAMPLE{32};
-constexpr auto INT24_MAX = 8388607;
-constexpr auto BITS_PER_BYTE = 8;
-constexpr auto DEFAULT_SUB_CHUNK_1_SIZE = 16;
-constexpr auto DEFAULT_RESERVE_VALUE = 44100 * 60 * 5;
-constexpr auto MAX_OSC_SUPPORT = 7; // Change this if we are going to support
+constexpr auto INT24_MAX{8388607};
+constexpr auto BITS_PER_BYTE{8};
+constexpr auto DEFAULT_SUB_CHUNK_1_SIZE{16};
+constexpr auto DEFAULT_RESERVE_VALUE{44100 * 60 * 5};
+constexpr auto MAX_OSC_SUPPORT{7}; // Change this if we are going to support
                                     // more or less (but hopefully more)
 
 enum wave_type_t : uint8_t {
@@ -762,29 +759,29 @@ public:
         break;
       case _16_BITS_PER_SAMPLE:
         !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                (sample % (INT16_MAX / 4)))
                                             : sample)
                    : add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                (sample % (INT16_MAX / 4)))
                                             : sample,
                                         m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                (sample % (INT16_MAX / 4)))
                                             : sample);
         break;
       case _24_BITS_PER_SAMPLE:
         !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   (sample % (INT24_MAX / 8)))
                                                : sample)
                    : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   (sample % (INT24_MAX / 8)))
                                                : sample,
                                            m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   (sample % (INT24_MAX / 8)))
                                                : sample);
         break;
@@ -862,29 +859,29 @@ public:
         break;
       case _16_BITS_PER_SAMPLE:
         !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                static_cast<int8_t>(sample))
                                             : sample)
                    : add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                static_cast<int8_t>(sample))
                                             : sample,
                                         m_apply_bitcrusher_effect
-                                            ? (BITCRUSHER_AMP_VALUE_16_BIT *
+                                            ? (m_bitcrusher_amp_value *
                                                static_cast<int8_t>(sample))
                                             : sample);
         break;
       case _24_BITS_PER_SAMPLE:
         !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   static_cast<int16_t>(sample))
                                                : sample)
                    : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   static_cast<int16_t>(sample))
                                                : sample,
                                            m_apply_bitcrusher_effect
-                                               ? (BITCRUSHER_AMP_VALUE_24_BIT *
+                                               ? (m_bitcrusher_amp_value *
                                                   static_cast<int16_t>(sample))
                                                : sample);
         break;
