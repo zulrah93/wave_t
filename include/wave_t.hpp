@@ -1935,8 +1935,12 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
     int64_t sample{};
-    double frequency_offset = 0.0;
+    double offset{};
+    double frequency_offset{};
+    double phase_offset{};
+    double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -1984,29 +1988,51 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
-    }
 
-    if (modulation_amplitude <= 0.0) {
-      modulation_amplitude = 1.0;
-    }
+      if (modulation_amplitude <= 0.0) {
+        modulation_amplitude = 1.0;
+      }
 
-    frequency_offset /= volume;
-    frequency_offset *= modulation_amplitude;
+      offset /= volume;
+      offset *= modulation_amplitude;
+
+      switch (selected_osc->operator_type) {
+      case oscillator_type_t::frequency_modulation: {
+        frequency_offset = offset;
+        break;
+      }
+      case oscillator_type_t::phase_modulation: {
+        phase_offset = offset;
+        break;
+      }
+      case oscillator_type_t::amplitude_modulation: {
+        amplitude_offset = offset;
+        break;
+      }
+      case oscillator_type_t::ring_modulation: {
+        ring_modulation = true;
+        break;
+      }
+      default: {
+        throw std::invalid_argument("How is this possible?");
+      }
+      }
+    }
 
     const auto wave_type =
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
@@ -2014,22 +2040,28 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
     if ((wave_type & wave_type_t::sine)) {
       sample += helper::pcm_sine(configuration.oscillator_d.frequency +
                                      frequency_offset,
-                                 time, volume, phase);
+                                 time, volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
-      sample += helper::pcm_triangle(time, volume,
+      sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                      configuration.oscillator_d.frequency +
                                          frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
-      sample += helper::pcm_square(time, volume,
+      sample += helper::pcm_square(time, volume + amplitude_offset,
                                    configuration.oscillator_d.frequency +
                                        frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
-      sample += helper::pcm_saw_tooth(time, volume,
+      sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                       configuration.oscillator_d.frequency +
                                           frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
     }
 
     time += (1.0 / static_cast<double>(sample_rate));
@@ -2051,8 +2083,12 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
     int64_t sample{};
-    double frequency_offset = 0.0;
+    double offset{};
+    double frequency_offset{};
+    double phase_offset{};
+    double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -2100,29 +2136,51 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
-    }
 
-    if (modulation_amplitude <= 0.0) {
-      modulation_amplitude = 1.0;
-    }
+      if (modulation_amplitude <= 0.0) {
+        modulation_amplitude = 1.0;
+      }
 
-    frequency_offset /= volume;
-    frequency_offset *= modulation_amplitude;
+      offset /= volume;
+      offset *= modulation_amplitude;
+
+      switch (selected_osc->operator_type) {
+      case oscillator_type_t::frequency_modulation: {
+        frequency_offset = offset;
+        break;
+      }
+      case oscillator_type_t::phase_modulation: {
+        phase_offset = offset;
+        break;
+      }
+      case oscillator_type_t::amplitude_modulation: {
+        amplitude_offset = offset;
+        break;
+      }
+      case oscillator_type_t::ring_modulation: {
+        ring_modulation = true;
+        break;
+      }
+      default: {
+        throw std::invalid_argument("How is this possible?");
+      }
+      }
+    }
 
     const auto wave_type =
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
@@ -2130,22 +2188,28 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
     if ((wave_type & wave_type_t::sine)) {
       sample += helper::pcm_sine(configuration.oscillator_d.frequency +
                                      frequency_offset,
-                                 time, volume, phase);
+                                 time, volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
-      sample += helper::pcm_triangle(time, volume,
+      sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                      configuration.oscillator_d.frequency +
                                          frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
-      sample += helper::pcm_square(time, volume,
+      sample += helper::pcm_square(time, volume + amplitude_offset,
                                    configuration.oscillator_d.frequency +
                                        frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
-      sample += helper::pcm_saw_tooth(time, volume,
+      sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                       configuration.oscillator_d.frequency +
                                           frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
     }
 
     time += (1.0 / static_cast<double>(sample_rate));
@@ -2167,8 +2231,12 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
   double time{};
   for (size_t _{}; _ < sample_size; _++) {
     int64_t sample{};
-    double frequency_offset = 0.0;
+    double offset{};
+    double frequency_offset{};
+    double phase_offset{};
+    double amplitude_offset{};
     double modulation_amplitude{};
+    bool ring_modulation{false};
     for (uint8_t osc_index = 0; osc_index < MAX_OSC_SUPPORT; osc_index++) {
 
       oscillator_config_t *selected_osc = nullptr;
@@ -2216,29 +2284,51 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        frequency_offset +=
+        offset +=
             helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
-    }
 
-    if (modulation_amplitude <= 0.0) {
-      modulation_amplitude = 1.0;
-    }
+      if (modulation_amplitude <= 0.0) {
+        modulation_amplitude = 1.0;
+      }
 
-    frequency_offset /= volume;
-    frequency_offset *= modulation_amplitude;
+      offset /= volume;
+      offset *= modulation_amplitude;
+
+      switch (selected_osc->operator_type) {
+      case oscillator_type_t::frequency_modulation: {
+        frequency_offset = offset;
+        break;
+      }
+      case oscillator_type_t::phase_modulation: {
+        phase_offset = offset;
+        break;
+      }
+      case oscillator_type_t::amplitude_modulation: {
+        amplitude_offset = offset;
+        break;
+      }
+      case oscillator_type_t::ring_modulation: {
+        ring_modulation = true;
+        break;
+      }
+      default: {
+        throw std::invalid_argument("How is this possible?");
+      }
+      }
+    }
 
     const auto wave_type =
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
@@ -2246,22 +2336,28 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
     if ((wave_type & wave_type_t::sine)) {
       sample += helper::pcm_sine(configuration.oscillator_d.frequency +
                                      frequency_offset,
-                                 time, volume, phase);
+                                 time, volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
-      sample += helper::pcm_triangle(time, volume,
+      sample += helper::pcm_triangle(time, volume + amplitude_offset,
                                      configuration.oscillator_d.frequency +
                                          frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
-      sample += helper::pcm_square(time, volume,
+      sample += helper::pcm_square(time, volume + amplitude_offset,
                                    configuration.oscillator_d.frequency +
                                        frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
-      sample += helper::pcm_saw_tooth(time, volume,
+      sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                       configuration.oscillator_d.frequency +
                                           frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
     }
 
     time += (1.0 / static_cast<double>(sample_rate));
