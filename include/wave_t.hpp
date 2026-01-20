@@ -263,6 +263,7 @@ struct oscillator_config_t {
   oscillator_selection_t osc_to_modulate;
   double modulation_amplitude; // Used by modulation to control strength or
                                // amplitutde of the modulation signal
+  double initial_phase_offset;
 };
 struct synth_config_t {
   oscillator_config_t oscillator_a;
@@ -1354,7 +1355,7 @@ std::vector<int32_t> osciallator_a(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_a.initial_phase_offset;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -1500,7 +1501,7 @@ std::vector<int32_t> osciallator_b(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_b.initial_phase_offset;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -1649,7 +1650,7 @@ std::vector<int32_t> osciallator_c(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_c.initial_phase_offset;;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -1793,7 +1794,7 @@ std::vector<int32_t> osciallator_d(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_d.initial_phase_offset;;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -1937,7 +1938,7 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_e.initial_phase_offset;;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2085,7 +2086,7 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_f.initial_phase_offset;;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2233,7 +2234,7 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset{};
+    double phase_offset = configuration.oscillator_g.initial_phase_offset;;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
