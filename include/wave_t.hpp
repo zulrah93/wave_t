@@ -51,6 +51,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <latch>
 
 using namespace std::literals::complex_literals;
 
@@ -72,7 +73,7 @@ constexpr auto MAX_OSC_SUPPORT{7}; // Change this if we are going to support
                                     // more or less (but hopefully more)
 
 enum wave_type_t : uint8_t {
-  invalid = 0,
+  linear = 0,
   sine = 1,
   triangle = 2,
   square = 4,
@@ -664,10 +665,12 @@ public:
                       synth_config_t &configuration) {
 
     if (m_header.sample_rate == 0) {
+      m_lfo_terminate.store(true);
       return false;
     }
 
     if (configuration.empty()) {
+      m_lfo_terminate.store(true);
       return false;
     }
 
@@ -723,6 +726,8 @@ public:
     auto wave_e = osc_e_carrier_future.get();
     auto wave_f = osc_f_carrier_future.get();
     auto wave_g = osc_g_carrier_future.get();
+
+    m_start_lfo_latch.count_down();
 
     for (size_t index{}; index < sample_size; index++) {
       int64_t sample{};
@@ -789,22 +794,24 @@ public:
       case _32_BITS_PER_SAMPLE:
         !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
                                                ? (m_bitcrusher_amp_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
+                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
                                                : sample)
                    : add_24_32_bits_sample(m_apply_bitcrusher_effect
                                                ? (m_bitcrusher_amp_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
+                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
                                                : sample,
                                            m_apply_bitcrusher_effect
                                                ? (m_bitcrusher_amp_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
+                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
                                                : sample);
         break;
       default:
+        m_lfo_terminate.store(true);
         return false;
       }
     }
 
+    m_lfo_terminate.store(true);
     return true;
   }
 
@@ -812,6 +819,7 @@ public:
                      double volume_percent) {
 
     if (m_header.sample_rate == 0) {
+      m_lfo_terminate.store(true);
       return false;
     }
 
@@ -835,6 +843,8 @@ public:
 
     const double volume = helper::set_volume(
         volume_percent / static_cast<double>(wave_count), max_sample_value);
+
+    m_start_lfo_latch.count_down();
 
     for (size_t _ = 0ul; _ < sample_size; _++) {
       int64_t sample{};
@@ -901,11 +911,13 @@ public:
                                                : sample);
         break;
       default:
+        m_lfo_terminate.store(true);
         return false;
       }
       time += (1.0 / sample_rate);
     }
 
+    m_lfo_terminate.store(true);
     return true;
   }
 
@@ -970,12 +982,47 @@ public:
   }
 
   void set_bitcrusher_amp_value(double value) {
-      if (value < 0.0) {
-          value = 0.0;
+      if (value < std::numeric_limits<double>::lowest()) {
+          value = std::numeric_limits<double>::lowest();
       }
       if (m_apply_bitcrusher_effect) {
           m_bitcrusher_amp_value = value;
       }
+  }
+
+  // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet precentage value the oscillator can be of the various waves defined in wave_type_t
+  void apply_osc_to_bitcrusher(double frequency, const wave_type_t wave_type, bool is_lfo = false) {
+      
+      if (!m_apply_bitcrusher_effect) {
+          return;
+      }
+
+      if (is_lfo && frequency > 20) {
+         frequency = 1.0;
+      }
+
+      if (frequency < 0.0) {
+          frequency = 1.0;
+      }
+      
+      m_lfo_terminate.store(false);
+      m_lfo_future = std::async(std::launch::async, [&]() {
+        m_start_lfo_latch.wait();
+        while(!m_lfo_terminate.load()) {
+          //TODO: Generate lfo signal to modulate
+          if (wave_type == wave_type_t::linear) {
+             if (m_bitcrusher_wet_percent > 1.0) {
+               m_bitcrusher_wet_percent = 0.01;
+             }
+             if (m_bitcrusher_wet_percent < 0.02) {
+                m_bitcrusher_wet_percent = 1.0;
+             }
+             m_bitcrusher_wet_percent -= 0.01;
+          }
+          //Convert frequency to period and use that as thread sleep value
+          std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
+        }
+      });
   }
 
   bool save_waveform_as_monochrome_bmp(const std::string& file_path) {
@@ -1332,8 +1379,11 @@ private:
   wave_header_t m_header;
   std::vector<int64_t> m_samples;
   bool m_apply_bitcrusher_effect{false};
-  double m_bitcrusher_wet_percent{1};
+  double m_bitcrusher_wet_percent{1.0};
   double m_bitcrusher_amp_value{1.0};
+  std::future<void> m_lfo_future;
+  std::atomic<bool> m_lfo_terminate;
+  std::latch m_start_lfo_latch{1};
   size_t m_sink_index{0ul};
 };
 

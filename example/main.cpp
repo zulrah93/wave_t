@@ -172,7 +172,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Uncomment line below to get alternative synth demo")
-#define AM_PM_MODULATION_DEMO
+//#define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
@@ -232,9 +232,12 @@ int main(int arguments_size, char **arguments) {
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
-  //synth_output.apply_bitcrusher_effect();
-  //synth_output.set_bitcrusher_wet_percentage(0.75);
-  //synth_output.set_bitcrusher_amp_value(1.45);
+//   synth_output.apply_bitcrusher_effect();
+//   synth_output.set_bitcrusher_wet_percentage(1.0);
+//   synth_output.set_bitcrusher_amp_value(1.0);
+//   constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
+//   synth_output.apply_osc_to_bitcrusher(10.0, wave_type_t::linear, lfo_enabled);
+
   constexpr const double volume{0.13};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
