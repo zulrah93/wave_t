@@ -123,7 +123,7 @@ constexpr int32_t pcm_triangle(double time, double amplititude,
 // Source: https://en.wikipedia.org/wiki/Square_wave_(waveform)
 constexpr int32_t pcm_square(double time, double amplititude,
                              double frequency) {
-  return static_cast<int16_t>(
+  return static_cast<int32_t>(
       amplititude * sign(sin(2 * std::numbers::pi * frequency * time)));
 }
 
@@ -991,7 +991,7 @@ public:
   }
 
   // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet precentage value the oscillator can be of the various waves defined in wave_type_t
-  void apply_osc_to_bitcrusher(double frequency, const wave_type_t wave_type, bool is_lfo = false) {
+  void apply_osc_to_bitcrusher_amp_value(double frequency, const wave_type_t wave_type, bool is_lfo = false) {
       
       if (!m_apply_bitcrusher_effect) {
           return;
@@ -1008,19 +1008,35 @@ public:
       m_lfo_terminate.store(false);
       m_lfo_future = std::async(std::launch::async, [&]() {
         m_start_lfo_latch.wait();
+        double time = 0.0;
+        constexpr const double volume{1.0};
+        constexpr const double phase {0.0};
         while(!m_lfo_terminate.load()) {
-          //TODO: Generate lfo signal to modulate
+
           if (wave_type == wave_type_t::linear) {
-             if (m_bitcrusher_wet_percent > 1.0) {
+            if (m_bitcrusher_wet_percent > 1.0) {
                m_bitcrusher_wet_percent = 0.01;
-             }
-             if (m_bitcrusher_wet_percent < 0.02) {
-                m_bitcrusher_wet_percent = 1.0;
-             }
-             m_bitcrusher_wet_percent -= 0.01;
+            }
+            if (m_bitcrusher_wet_percent < 0.02) {
+              m_bitcrusher_wet_percent = 1.0;
+            }
+            m_bitcrusher_wet_percent -= 0.01;
+            //Convert frequency to period and use that as thread sleep value
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
+            continue;
           }
-          //Convert frequency to period and use that as thread sleep value
-          std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
+          else if (wave_type == wave_type_t::sawtooth) {
+            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_saw_tooth(time, volume, frequency))) / static_cast<double>(INT32_MAX);
+          }
+          else if (wave_type == wave_type_t::square) {
+            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_square(time, volume, frequency))) / static_cast<double>(INT32_MAX);
+          }
+          else if (wave_type == wave_type_t::sine) {
+            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_sine(frequency, time, volume, phase))) / static_cast<double>(INT32_MAX);
+          }
+
+          time += std::numeric_limits<double>::lowest();
+          std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
       });
   }

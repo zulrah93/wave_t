@@ -226,17 +226,17 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_g.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
-  constexpr const double seconds{1.25};
+  constexpr const double seconds{1.55};
 
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
-//   synth_output.apply_bitcrusher_effect();
-//   synth_output.set_bitcrusher_wet_percentage(1.0);
-//   synth_output.set_bitcrusher_amp_value(1.0);
-//   constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
-//   synth_output.apply_osc_to_bitcrusher(10.0, wave_type_t::linear, lfo_enabled);
+  synth_output.apply_bitcrusher_effect();
+  synth_output.set_bitcrusher_wet_percentage(1.0);
+  synth_output.set_bitcrusher_amp_value(1.0);
+  constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
+  synth_output.apply_osc_to_bitcrusher_amp_value(420.0, wave_type_t::square, lfo_enabled);
 
   constexpr const double volume{0.13};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
