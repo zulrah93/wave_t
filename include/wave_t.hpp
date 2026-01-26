@@ -248,6 +248,7 @@ enum oscillator_selection_t : uint8_t {
   oscillator_f = 6,
   oscillator_g = 7
 };
+
 enum oscillator_type_t : uint8_t {
   empty = 0,
   carrier = 1,
@@ -256,6 +257,7 @@ enum oscillator_type_t : uint8_t {
   amplitude_modulation = 4,
   ring_modulation = 5
 };
+
 struct oscillator_config_t {
   oscillator_type_t operator_type;
   uint8_t wave_type; // Can be a combination of multiple waves so this
@@ -266,6 +268,17 @@ struct oscillator_config_t {
                                // amplitutde of the modulation signal
   double initial_phase_offset;
 };
+
+enum effects_type_t : uint8_t {
+  bitcrusher = 0 // Generic distortion by downsampling :)
+};
+
+struct lfo_config_t {
+  double frequency; // Should be low frequency but we won't cap it the value so you could make it a hfo if that exists :)
+  wave_type_t wave_type;
+  effects_type_t effect_to_modulate;
+};
+
 struct synth_config_t {
   oscillator_config_t oscillator_a;
   oscillator_config_t oscillator_b;
@@ -274,6 +287,8 @@ struct synth_config_t {
   oscillator_config_t oscillator_e;
   oscillator_config_t oscillator_f;
   oscillator_config_t oscillator_g;
+  lfo_config_t lfo;
+  bool apply_bit_crusher_effect;
   bool empty(void) const {
     return oscillator_a.operator_type == oscillator_type_t::empty &&
            oscillator_b.operator_type == oscillator_type_t::empty &&

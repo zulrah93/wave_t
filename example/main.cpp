@@ -172,7 +172,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Uncomment line below to get alternative synth demo")
-//#define AM_PM_MODULATION_DEMO
+#define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
@@ -232,11 +232,11 @@ int main(int arguments_size, char **arguments) {
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
-  synth_output.apply_bitcrusher_effect();
-  synth_output.set_bitcrusher_wet_percentage(1.0);
-  synth_output.set_bitcrusher_amp_value(1.0);
-  constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
-  synth_output.apply_osc_to_bitcrusher_amp_value(420.0, wave_type_t::square, lfo_enabled);
+//   synth_output.apply_bitcrusher_effect();
+//   synth_output.set_bitcrusher_wet_percentage(1.0);
+//   synth_output.set_bitcrusher_amp_value(1.0);
+//   constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
+//   synth_output.apply_osc_to_bitcrusher_amp_value(420.0, wave_type_t::square, lfo_enabled);
 
   constexpr const double volume{0.13};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
@@ -260,62 +260,55 @@ int main(int arguments_size, char **arguments) {
       << std::endl;
 #else
 
-  //constexpr const double E4_FREQUENCY{329.6276};
+  constexpr const double E4_FREQUENCY{329.6276};
 
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sine;
   configuration.oscillator_a.frequency = C4_FREQUENCY;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
-  configuration.oscillator_a.initial_phase_offset = (std::numbers::pi * 2.0) + 0.02;
+  configuration.oscillator_a.initial_phase_offset = 0.0;
 
-  configuration.oscillator_b.operator_type = oscillator_type_t::carrier;
+  configuration.oscillator_b.operator_type = oscillator_type_t::ring_modulation;
   configuration.oscillator_b.wave_type = wave_type_t::sine;
-  configuration.oscillator_b.frequency = C4_FREQUENCY;
+  configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
   configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
+  configuration.oscillator_b.modulation_amplitude = 0.75;
+
+  configuration.oscillator_c.operator_type = oscillator_type_t::ring_modulation;
+  configuration.oscillator_c.wave_type = wave_type_t::sine;
+  configuration.oscillator_c.frequency = C4_FREQUENCY * 1.5;
+  configuration.oscillator_c.osc_to_modulate =
+      oscillator_selection_t::oscillator_b;
+  configuration.oscillator_c.modulation_amplitude = 0.5;
+
+  configuration.oscillator_d.operator_type = oscillator_type_t::ring_modulation;
+  configuration.oscillator_d.wave_type = wave_type_t::sine;
+  configuration.oscillator_d.frequency = C4_FREQUENCY * 1.25;
+  configuration.oscillator_d.osc_to_modulate =
+      oscillator_selection_t::oscillator_c;
+  configuration.oscillator_d.modulation_amplitude = 0.5;
+
+  configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
+  configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_e.frequency = E4_FREQUENCY * 2.0;
+  configuration.oscillator_e.osc_to_modulate =
       oscillator_selection_t::none_selected;
-  configuration.oscillator_b.initial_phase_offset = (std::numbers::pi * 2.0) - 0.01;
 
-//   configuration.oscillator_b.operator_type = oscillator_type_t::ring_modulation;
-//   configuration.oscillator_b.wave_type = wave_type_t::sine;
-//   configuration.oscillator_b.frequency = C4_FREQUENCY / 2.0;
-//   configuration.oscillator_b.osc_to_modulate =
-//       oscillator_selection_t::oscillator_a;
-//   configuration.oscillator_b.modulation_amplitude = 0.75;
+  configuration.oscillator_f.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_f.frequency = E4_FREQUENCY * 4.0;
+  configuration.oscillator_f.osc_to_modulate =
+      oscillator_selection_t::oscillator_e;
+  configuration.oscillator_f.modulation_amplitude = 1.25;
 
-//   configuration.oscillator_c.operator_type = oscillator_type_t::ring_modulation;
-//   configuration.oscillator_c.wave_type = wave_type_t::sine;
-//   configuration.oscillator_c.frequency = C4_FREQUENCY * 1.5;
-//   configuration.oscillator_c.osc_to_modulate =
-//       oscillator_selection_t::oscillator_b;
-//   configuration.oscillator_c.modulation_amplitude = 0.5;
-
-//   configuration.oscillator_d.operator_type = oscillator_type_t::ring_modulation;
-//   configuration.oscillator_d.wave_type = wave_type_t::sine;
-//   configuration.oscillator_d.frequency = C4_FREQUENCY * 1.25;
-//   configuration.oscillator_d.osc_to_modulate =
-//       oscillator_selection_t::oscillator_c;
-//   configuration.oscillator_d.modulation_amplitude = 0.5;
-
-//   configuration.oscillator_e.operator_type = oscillator_type_t::carrier;
-//   configuration.oscillator_e.wave_type = wave_type_t::sawtooth;
-//   configuration.oscillator_e.frequency = E4_FREQUENCY * 2.0;
-//   configuration.oscillator_e.osc_to_modulate =
-//       oscillator_selection_t::none_selected;
-
-//   configuration.oscillator_f.operator_type = oscillator_type_t::phase_modulation;
-//   configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
-//   configuration.oscillator_f.frequency = E4_FREQUENCY * 4.0;
-//   configuration.oscillator_f.osc_to_modulate =
-//       oscillator_selection_t::oscillator_e;
-//   configuration.oscillator_f.modulation_amplitude = 1.25;
-
-//   configuration.oscillator_g.operator_type = oscillator_type_t::phase_modulation;
-//   configuration.oscillator_g.wave_type = wave_type_t::sawtooth;
-//   configuration.oscillator_g.frequency = E4_FREQUENCY * 2.0;
-//   configuration.oscillator_g.osc_to_modulate =
-//       oscillator_selection_t::oscillator_e;
-//   configuration.oscillator_g.modulation_amplitude = 1.50;
+  configuration.oscillator_g.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_g.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_g.frequency = E4_FREQUENCY * 2.0;
+  configuration.oscillator_g.osc_to_modulate =
+      oscillator_selection_t::oscillator_e;
+  configuration.oscillator_g.modulation_amplitude = 1.50;
 
   constexpr const double seconds{1.55};
 
@@ -323,9 +316,12 @@ int main(int arguments_size, char **arguments) {
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
   // Uncomment if you want to apply bitcrusher :)
-  // synth_output.apply_bitcrusher_effect();
-  // synth_output.set_bitcrusher_wet_percentage(0.15);
- //  synth_output.set_bitcrusher_amp_value(2.80);
+  synth_output.apply_bitcrusher_effect();
+  synth_output.set_bitcrusher_wet_percentage(1.0);
+  synth_output.set_bitcrusher_amp_value(1.0);
+  constexpr const bool lfo_enabled{false}; // Set to true if you want to pass higher frequencies -- at your musical risk :)
+  synth_output.apply_osc_to_bitcrusher_amp_value(E4_FREQUENCY, wave_type_t::sawtooth, lfo_enabled);
+
   constexpr const double volume{0.42};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
