@@ -19,10 +19,12 @@ int main(int arguments_size, char** arguments) {
   wave_file_t output;
   output.set_sample_rate(44100);
   output.set_number_of_channels(1);
-  output.set_bits_per_sample(16);
+  output.set_bits_per_sample(16); // Supports up to 32-bit -- float writing isn't supported only reading values as float is currently supported 
   const size_t sample_size = 44100 * 60 * 5; // 5 minutes of 16-bit PCM sample
   //This helper member function can generate one or a combination of waves only supports mono or stereo for now 
-  output.generate_wave(wave_type_t::sine, sample_size, 440.0, 0.8);
+  const double frequency{440.0};
+  const double volume{0.8};
+  output.generate_wave(wave_type_t::sine, sample_size, frequency, volume);
   output.save("output.wav");
   return 0;
 }
@@ -53,6 +55,14 @@ std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT << "osc ) at C4 (261.
   wave_file_t::synth_config_t configuration;
 
   // Supersaw example -- hopefully :P
+
+   // Uncomment if you want to apply bitcrusher :)
+  //configuration.apply_bitcrusher_effect = true;
+  //configuration.bitcrusher_wet_percentage = 1.0;
+  //configuration.bitcrusher_gain_value = 1.0;
+  //configuration.lfo.effect_to_modulate = effects_type_t::bitcrusher_wet_percentage;
+  //configuration.lfo.frequency = 20.0;
+  //configuration.lfo.wave_type = wave_type_t::linear;
   
   constexpr double detune_amount = 0.00;
 
@@ -138,7 +148,6 @@ The library also generates portable bitmaps of the waveforms along with windows 
 # Example of Ring Modulation (Work in Progress)
 
 ```
-
   wave_file_t synth_output;
   synth_output.set_sample_rate(sample_rate);
   synth_output.set_number_of_channels(1);
@@ -147,8 +156,15 @@ The library also generates portable bitmaps of the waveforms along with windows 
 
   synth_config_t configuration{};
 
-
   constexpr const double E4_FREQUENCY{329.6276};
+
+  // Uncomment if you want to apply bitcrusher :)
+  //configuration.apply_bitcrusher_effect = true;
+  //configuration.bitcrusher_wet_percentage = 1.0;
+  //configuration.bitcrusher_gain_value = 1.0;
+  //configuration.lfo.effect_to_modulate = effects_type_t::bitcrusher_wet_percentage;
+  //configuration.lfo.frequency = 20.0;
+  //configuration.lfo.wave_type = wave_type_t::linear;
 
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sine;
