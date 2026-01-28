@@ -754,7 +754,7 @@ public:
        m_bitcrusher_wet_percent = configuration.bitcrusher_wet_percentage;
     }
     else {
-      m_apply_bitcrusher_effect = true;
+      m_apply_bitcrusher_effect = false;
       m_bitcrusher_wet_percent = 1.0;
     }
 
@@ -1465,6 +1465,8 @@ private:
           std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
       });
+
+
   }
 
   wave_header_t m_header;
