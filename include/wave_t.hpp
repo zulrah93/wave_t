@@ -1014,7 +1014,8 @@ public:
     return frequency_domain;
   }
 
-  bool save_waveform_as_monochrome_bmp(const std::string& file_path) {
+  // Second parameter set to false if you want the bitmap to represent the true scale of the wavefile one sample is one pixel so its expensive but fun :)
+  bool save_waveform_as_monochrome_bmp(const std::string& file_path, bool scale_down = true) {
       if (file_path.empty()) {
           return false;
       }
@@ -1022,8 +1023,11 @@ public:
       if (m_samples.empty()) {
           return false;
       }
-
-      const size_t width = (m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
+      constexpr const size_t default_width = 2048;
+      const size_t width = scale_down ?  
+          default_width : 
+          (m_samples.size() 
+            % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
       const size_t height{128};
 
       std::future<std::vector<std::vector<bool>>> bitmap_future = std::async(std::launch::async, [&]() {
@@ -1031,14 +1035,19 @@ public:
         for (size_t _ = 0; _ < height; _++) {
             bitmap.emplace_back(width, false);
         }
-        for (size_t column = 0; column < width; column++) {
-          size_t row = static_cast<size_t>(static_cast<double>(height) * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
+        const size_t true_width = (m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
+        const size_t max_sample_count = !scale_down ? width : true_width;
+        for (size_t column = 0; column < max_sample_count; column++) {
+          size_t true_column = !scale_down ? column : static_cast<size_t>(static_cast<double>(width) 
+                        * (static_cast<double>(column) / static_cast<double>(max_sample_count)));
+          size_t row = static_cast<size_t>(static_cast<double>(height) 
+                                        * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
           if (row >= height) {
               continue;
           }
-          bitmap[row][column] = true;
+          bitmap[row][true_column] = true;
           for(row += 1; row < height; row++) {
-              bitmap[row][column] = true;
+              bitmap[row][true_column] = true;
           }
         }
         return bitmap;
