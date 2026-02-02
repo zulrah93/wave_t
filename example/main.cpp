@@ -77,7 +77,8 @@ int main(int arguments_size, char **arguments) {
   }
 
   constexpr const bool scale_down_image{true};  // Default is true for performance 
-  if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image)) {
+  constexpr const bool shade_waveform{false};
+  if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image, shade_waveform)) {
         std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
 
@@ -148,7 +149,7 @@ int main(int arguments_size, char **arguments) {
             << "(percent error is " << percent_error << " %) \033[0m"
             << std::endl;
 
-  if (input.save_waveform_as_monochrome_bmp("d#5_trumpet.bmp", scale_down_image)) {
+  if (input.save_waveform_as_monochrome_bmp("d#5_trumpet.bmp", scale_down_image, shade_waveform)) {
         std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
 
@@ -244,7 +245,7 @@ int main(int arguments_size, char **arguments) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
     
-    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image)) {
+    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image, shade_waveform)) {
             std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
     }
     else {
@@ -329,7 +330,7 @@ int main(int arguments_size, char **arguments) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
     
-    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image)) {
+    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image, shade_waveform)) {
             std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
     }
     else {

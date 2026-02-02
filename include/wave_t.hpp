@@ -1015,7 +1015,8 @@ public:
   }
 
   // Second parameter set to false if you want the bitmap to represent the true scale of the wavefile one sample is one pixel so its expensive but fun :)
-  bool save_waveform_as_monochrome_bmp(const std::string& file_path, bool scale_down = true) {
+  // Third parameter if set to true (false is default) then draws the waveform shaded else it plots it without shading underneath the waveform
+  bool save_waveform_as_monochrome_bmp(const std::string& file_path, bool scale_down = true, bool shade_waveform = false) {
       if (file_path.empty()) {
           return false;
       }
@@ -1038,17 +1039,40 @@ public:
         const size_t true_width = (m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
         const size_t max_sample_count = !scale_down ? width : true_width;
         for (size_t column = 0; column < max_sample_count; column++) {
-          size_t true_column = !scale_down ? column : static_cast<size_t>(static_cast<double>(width) 
+          size_t true_column = !scale_down ? column : static_cast<size_t>(static_cast<double>(width - 1) 
                         * (static_cast<double>(column) / static_cast<double>(max_sample_count)));
           size_t row = static_cast<size_t>(static_cast<double>(height) 
                                         * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
           if (row >= height) {
               continue;
           }
-          bitmap[row][true_column] = true;
-          for(row += 1; row < height; row++) {
-              bitmap[row][true_column] = true;
+          
+          if (!shade_waveform) { 
+            //Plot the main pixel and surrounding pixels to make it thicker
+            if (row > 0) {
+              bitmap[row-1][true_column] = true;
+            }
+            if (row > 0 && true_column > 0) {
+              bitmap[row-1][true_column-1] = true;
+            }
+            bitmap[row][true_column] = true;
+            if ((row+1) < height) {
+              bitmap[row+1][true_column] = true;
+            }
+            if ((true_column + 1) < max_sample_count) {
+              bitmap[row][true_column+1] = true;
+            }
+            if (((row+1) < height) && ((true_column+1) < max_sample_count)) {
+              bitmap[row+1][true_column+1] = true;
+            }
           }
+          else {
+            //Just shade the waveform below 
+            for(row += 1; row < height; row++) {
+                bitmap[row][true_column] = true;
+            }
+          }
+
         }
         return bitmap;
       });
@@ -1089,19 +1113,24 @@ public:
 
       auto bitmap = bitmap_future.get();
 
+      bool flip{false}; // Used to alternate color pixel
+
       for(auto& row : bitmap) {
           for(bool column : row) {
               if (column) { // If this x y is set to true then we insert a black pixel (0x00 0x00 0x00 0xFF)
                   bytes.push_back(0xff);
-                  bytes.push_back(0x00);
-                  bytes.push_back(0x00);
-                  bytes.push_back(0x00);
+                  bytes.push_back(0x00); // red
+                  bytes.push_back(flip ? 0xff : 0x00); // green
+                  bytes.push_back(0x00); // blue
+                  if (!shade_waveform) {
+                    flip ^= true;
+                  }
               }
               else { // Draw default white pixel (0xff 0xff 0xff 0xff)
                   bytes.push_back(0xff);
-                  bytes.push_back(0xff);
-                  bytes.push_back(0xff);
-                  bytes.push_back(0xff);
+                  bytes.push_back(0xff); // red
+                  bytes.push_back(0xff); // green
+                  bytes.push_back(0xff); // blue
               }
           }
       }
