@@ -1046,7 +1046,7 @@ public:
           if (row >= height) {
               continue;
           }
-          
+
           if (!shade_waveform) { 
             //Plot the main pixel and surrounding pixels to make it thicker
             if (row > 0) {
@@ -1118,24 +1118,22 @@ public:
       for(auto& row : bitmap) {
           for(bool column : row) {
               if (column) { // If this x y is set to true then we insert a black pixel (0x00 0x00 0x00 0xFF)
-                  bytes.push_back(0xff);
-                  bytes.push_back(0x00); // red
-                  bytes.push_back(flip ? 0xff : 0x00); // green
                   bytes.push_back(0x00); // blue
+                  bytes.push_back(flip ? 0xff : 0x00); // green
+                  bytes.push_back(0x00); // red
+                  bytes.push_back(0xff); // alpha
                   if (!shade_waveform) {
                     flip ^= true;
                   }
               }
               else { // Draw default white pixel (0xff 0xff 0xff 0xff)
-                  bytes.push_back(0xff);
-                  bytes.push_back(0xff); // red
-                  bytes.push_back(0xff); // green
                   bytes.push_back(0xff); // blue
+                  bytes.push_back(0xff); // green
+                  bytes.push_back(0xff); // red
+                  bytes.push_back(0xff); // alpha
               }
           }
       }
-
-      std::reverse(bytes.begin(), bytes.end());
 
       expected_bytes += bytes.size();
       written_bytes +=
