@@ -140,9 +140,9 @@ Also supports adding samples by converting a frequency domain (a vector of compl
 
 Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Support for applying bitcrusher effect. Still this header only library needs more improvent but its mostly working for now except the dft alogrithm. Either way always verify any code you will use in production.
 
-The library also generates portable bitmaps of the waveforms along with windows bitmap (simple image formats for max compatability) and here is a screenshot in action of a generated synth.
+The library also generates portable bitmaps of the waveforms along with windows bitmap (simple image formats for max compatability) and here is a screenshot in action of the waveform of d#5 trumpet.
 
-<img width="1903" height="84" alt="image" src="https://github.com/user-attachments/assets/ad2c44ab-d33d-46b4-8f2b-e9384e6f9359" />
+<img width="1903" height="84" alt="image" src="https://github.com/zulrah93/wave_t/raw/refs/heads/master/generated_waveforms/d%235_trumpet.bmp" />
 
 
 # Example of Ring Modulation (Work in Progress)
