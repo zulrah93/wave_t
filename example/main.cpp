@@ -233,7 +233,7 @@ int main(int arguments_size, char **arguments) {
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
-   configuration.apply_bitcrusher_effect = true;
+   configuration.apply_bitcrusher_effect = false;
    configuration.bitcrusher_wet_percentage = 1.0;
    configuration.bitcrusher_gain_value = 1.0;
    configuration.lfo.effect_to_modulate = effects_type_t::bitcrusher_wet_percentage;

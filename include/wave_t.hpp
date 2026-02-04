@@ -306,6 +306,11 @@ struct synth_config_t {
 // Internal for synth making -- not recommended to call these directly
 namespace processing_functions {
 
+std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* osc_to_process, const size_t &sample_size,
+                                   const double &volume, const bool &is_stereo,
+                                   const uint32_t &sample_rate,
+                                   synth_config_t &configuration, std::initializer_list<oscillator_config_t*> selected_oscs);
+
 std::vector<int32_t>
 osciallator_a(const size_t &sample_size, const double &volume,
               const bool &is_stereo, const uint32_t &sample_rate,
@@ -703,39 +708,89 @@ public:
     std::vector<int32_t> output;
     output.reserve(sample_size);
 
+    // auto osc_a_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_a,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    // auto osc_b_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_b,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    // auto osc_c_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_c,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    // auto osc_d_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_d,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    // auto osc_e_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_e,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+    // auto osc_f_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_f,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    // auto osc_g_carrier_future =
+    //     std::async(std::launch::async, &processing_functions::osciallator_g,
+    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+    //                std::ref(sample_rate), std::ref(configuration));
+
+    const auto selected_oscs_a = {&configuration.oscillator_b, &configuration.oscillator_c, &configuration.oscillator_d, 
+                                      &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_b = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
+                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_c = {&configuration.oscillator_a, &configuration.oscillator_b, &configuration.oscillator_d, 
+                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_d = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_b, 
+                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_e = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
+                  &configuration.oscillator_b, &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_f = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
+                  &configuration.oscillator_e, &configuration.oscillator_b, &configuration.oscillator_g};
+    const auto selected_oscs_g = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
+                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_b};
+
+
     auto osc_a_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_a,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+        std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_a,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_a);
 
     auto osc_b_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_b,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+        std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_b,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_b);
 
     auto osc_c_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_c,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+     std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_c,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_c);
 
     auto osc_d_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_d,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+         std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_d,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_d);
 
     auto osc_e_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_e,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+         std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_e,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_e);
     auto osc_f_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_f,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
-
+      std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_f,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_f);
     auto osc_g_carrier_future =
-        std::async(std::launch::async, &processing_functions::osciallator_g,
-                   std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                   std::ref(sample_rate), std::ref(configuration));
+      std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_g,
+                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
+                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_g);
+
 
     auto wave_a = osc_a_carrier_future.get();
     auto wave_b = osc_b_carrier_future.get();
@@ -1518,7 +1573,124 @@ private:
 
 // Not to be directly used but more for the wave_file_t to help generate nice
 // synth sounds!
-namespace processing_functions { // TODO: This might need refactoring soon :)
+namespace processing_functions { 
+
+
+std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* osc_to_process, const size_t &sample_size,
+                                   const double &volume, const bool &is_stereo,
+                                   const uint32_t &sample_rate,
+                                   synth_config_t &configuration, std::initializer_list<oscillator_config_t*> selected_oscs) {
+
+  std::vector<int32_t> samples;
+  if (nullptr == osc_to_process) {
+      return samples;
+  }
+
+  samples.reserve(sample_size);
+  double phase{};
+  double time{};
+  for (size_t _{}; _ < sample_size; _++) {
+    int64_t sample{};
+    double offset{};
+    double frequency_offset{};
+    double phase_offset = configuration.oscillator_a.initial_phase_offset;
+    double amplitude_offset{};
+    double modulation_amplitude{};
+    bool ring_modulation{false};
+    for (auto& selected_osc : selected_oscs) {
+
+      if (nullptr == selected_osc) {
+        continue;
+      }
+
+      if (selected_osc != osc_to_process) {
+        continue;
+      }
+
+      modulation_amplitude += selected_osc->modulation_amplitude;
+
+      const double modulating_frequency = selected_osc->frequency;
+
+      if ((selected_osc->wave_type & wave_type_t::sine)) {
+        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
+      }
+      if ((selected_osc->wave_type & wave_type_t::triangle)) {
+        offset += helper::pcm_triangle(time, volume, modulating_frequency);
+      }
+      if ((selected_osc->wave_type & wave_type_t::square)) {
+        offset += helper::pcm_square(time, volume, modulating_frequency);
+      }
+      if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
+        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
+      }
+
+      if (modulation_amplitude <= 0.0) {
+        modulation_amplitude = 1.0;
+      }
+
+      offset /= volume;
+      offset *= modulation_amplitude;
+
+      switch (selected_osc->operator_type) {
+      case oscillator_type_t::frequency_modulation: {
+        frequency_offset = offset;
+        break;
+      }
+      case oscillator_type_t::phase_modulation: {
+        phase_offset = offset;
+        break;
+      }
+      case oscillator_type_t::amplitude_modulation: {
+        amplitude_offset = offset;
+        break;
+      }
+      case oscillator_type_t::ring_modulation: {
+        ring_modulation = true;
+        break;
+      }
+      default: {
+        throw std::invalid_argument("How is this possible?");
+      }
+      }
+    }
+
+    const auto wave_type =
+        static_cast<uint8_t>(configuration.oscillator_a.wave_type);
+
+    if ((wave_type & wave_type_t::sine)) {
+      sample += helper::pcm_sine(
+          configuration.oscillator_a.frequency + frequency_offset, time,
+          volume + amplitude_offset, phase + phase_offset);
+    }
+    if ((wave_type & wave_type_t::triangle)) {
+      sample += helper::pcm_triangle(time, volume + amplitude_offset,
+                                     configuration.oscillator_a.frequency +
+                                         frequency_offset);
+    }
+    if ((wave_type & wave_type_t::square)) {
+      sample += helper::pcm_square(time, volume + amplitude_offset,
+                                   configuration.oscillator_a.frequency +
+                                       frequency_offset);
+    }
+    if ((wave_type & wave_type_t::sawtooth)) {
+      sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
+                                      configuration.oscillator_a.frequency +
+                                          frequency_offset);
+    }
+
+    // Ring modulation we will multiply the carrier signal with the modulating
+    // signal (sine, triangle, etc.)
+    if (ring_modulation) {
+      sample *= offset;
+    }
+
+    time += (1.0 / static_cast<double>(sample_rate));
+    samples.push_back(sample);
+  }
+
+  return samples;
+}
+
 std::vector<int32_t> osciallator_a(const size_t &sample_size,
                                    const double &volume, const bool &is_stereo,
                                    const uint32_t &sample_rate,
