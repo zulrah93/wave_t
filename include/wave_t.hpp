@@ -29,9 +29,8 @@
 #ifndef WAVE_T_HPP
 #define WAVE_T_HPP
 
-#include <format>
-#include <cfenv>
 #include <bit>
+#include <cfenv>
 #include <climits>
 #include <cmath>
 #include <complex>
@@ -39,10 +38,12 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <future>
 #include <generator>
 #include <ios>
+#include <latch>
 #include <limits>
 #include <numbers>
 #include <optional>
@@ -51,7 +52,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <latch>
 
 using namespace std::literals::complex_literals;
 
@@ -70,7 +70,7 @@ constexpr auto BITS_PER_BYTE{8};
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE{16};
 constexpr auto DEFAULT_RESERVE_VALUE{44100 * 60 * 5};
 constexpr auto MAX_OSC_SUPPORT{7}; // Change this if we are going to support
-                                    // more or less (but hopefully more)
+                                   // more or less (but hopefully more)
 
 enum wave_type_t : uint8_t {
   linear = 0,
@@ -226,12 +226,14 @@ void discrete_fourier_transform_async(
 constexpr double
 get_decibel_fullscale_from_sample(const int64_t sample,
                                   const int32_t max_sample_value) {
-  auto ratio = std::abs(static_cast<double>(sample)) / static_cast<double>(max_sample_value);
+  auto ratio = std::abs(static_cast<double>(sample)) /
+               static_cast<double>(max_sample_value);
   auto original_rounding_method = std::fegetround();
   std::fesetround(FE_TOWARDZERO);
-  auto dbfs = ratio > 0.98 ? 
-    (std::floor((100.0 * std::log10(ratio) * 20.0) / 2.0) / 100.0) 
-                                                  : (std::log10(ratio) * 20.0);
+  auto dbfs =
+      ratio > 0.98
+          ? (std::floor((100.0 * std::log10(ratio) * 20.0) / 2.0) / 100.0)
+          : (std::log10(ratio) * 20.0);
   std::fesetround(original_rounding_method);
   return dbfs;
 }
@@ -275,7 +277,8 @@ enum effects_type_t : uint8_t {
 };
 
 struct lfo_config_t {
-  double frequency; // Should be low frequency but we won't cap it the value so you could make it a hfo if that exists :)
+  double frequency; // Should be low frequency but we won't cap it the value so
+                    // you could make it a hfo if that exists :)
   wave_type_t wave_type;
   effects_type_t effect_to_modulate;
 };
@@ -306,10 +309,11 @@ struct synth_config_t {
 // Internal for synth making -- not recommended to call these directly
 namespace processing_functions {
 
-std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* osc_to_process, const size_t &sample_size,
-                                   const double &volume, const bool &is_stereo,
-                                   const uint32_t &sample_rate,
-                                   synth_config_t &configuration, std::initializer_list<oscillator_config_t*> selected_oscs);
+std::vector<int32_t> oscillator_processing_callback(
+    const oscillator_selection_t &osc_to_process, const size_t &sample_size,
+    const double &volume, const bool &is_stereo, const uint32_t &sample_rate,
+    synth_config_t &configuration,
+    std::initializer_list<oscillator_config_t *> selected_oscs);
 
 std::vector<int32_t>
 osciallator_a(const size_t &sample_size, const double &volume,
@@ -710,87 +714,120 @@ public:
 
     // auto osc_a_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_a,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
     // auto osc_b_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_b,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
     // auto osc_c_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_c,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
     // auto osc_d_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_d,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
     // auto osc_e_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_e,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
     // auto osc_f_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_f,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
     // auto osc_g_carrier_future =
     //     std::async(std::launch::async, &processing_functions::osciallator_g,
-    //                std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-    //                std::ref(sample_rate), std::ref(configuration));
+    //                std::ref(sample_size), std::ref(volume),
+    //                std::ref(is_stereo), std::ref(sample_rate),
+    //                std::ref(configuration));
 
-    const auto selected_oscs_a = {&configuration.oscillator_b, &configuration.oscillator_c, &configuration.oscillator_d, 
-                                      &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
-    const auto selected_oscs_b = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
-                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
-    const auto selected_oscs_c = {&configuration.oscillator_a, &configuration.oscillator_b, &configuration.oscillator_d, 
-                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
-    const auto selected_oscs_d = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_b, 
-                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_g};
-    const auto selected_oscs_e = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
-                  &configuration.oscillator_b, &configuration.oscillator_f, &configuration.oscillator_g};
-    const auto selected_oscs_f = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
-                  &configuration.oscillator_e, &configuration.oscillator_b, &configuration.oscillator_g};
-    const auto selected_oscs_g = {&configuration.oscillator_a, &configuration.oscillator_c, &configuration.oscillator_d, 
-                  &configuration.oscillator_e, &configuration.oscillator_f, &configuration.oscillator_b};
-
+    const auto selected_oscs_a = {
+        &configuration.oscillator_b, &configuration.oscillator_c,
+        &configuration.oscillator_d, &configuration.oscillator_e,
+        &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_b = {
+        &configuration.oscillator_a, &configuration.oscillator_c,
+        &configuration.oscillator_d, &configuration.oscillator_e,
+        &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_c = {
+        &configuration.oscillator_a, &configuration.oscillator_b,
+        &configuration.oscillator_d, &configuration.oscillator_e,
+        &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_d = {
+        &configuration.oscillator_a, &configuration.oscillator_c,
+        &configuration.oscillator_b, &configuration.oscillator_e,
+        &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_e = {
+        &configuration.oscillator_a, &configuration.oscillator_c,
+        &configuration.oscillator_d, &configuration.oscillator_b,
+        &configuration.oscillator_f, &configuration.oscillator_g};
+    const auto selected_oscs_f = {
+        &configuration.oscillator_a, &configuration.oscillator_c,
+        &configuration.oscillator_d, &configuration.oscillator_e,
+        &configuration.oscillator_b, &configuration.oscillator_g};
+    const auto selected_oscs_g = {
+        &configuration.oscillator_a, &configuration.oscillator_c,
+        &configuration.oscillator_d, &configuration.oscillator_e,
+        &configuration.oscillator_f, &configuration.oscillator_b};
 
     auto osc_a_carrier_future =
-        std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_a,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_a);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_a, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_a);
 
     auto osc_b_carrier_future =
-        std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_b,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_b);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_b, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_b);
 
     auto osc_c_carrier_future =
-     std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_c,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_c);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                  oscillator_selection_t::oscillator_c, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_c);
 
     auto osc_d_carrier_future =
-         std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_d,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_d);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_d, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_d);
 
     auto osc_e_carrier_future =
-         std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_e,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_e);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_e, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_e);
     auto osc_f_carrier_future =
-      std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_f,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_f);
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_f, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_f);
     auto osc_g_carrier_future =
-      std::async(std::launch::async, &processing_functions::oscillator_processing_callback, &configuration.oscillator_g,
-                                    std::ref(sample_size), std::ref(volume), std::ref(is_stereo),
-                                    std::ref(sample_rate), std::ref(configuration), selected_oscs_g);
-
+        std::async(std::launch::async,
+                   &processing_functions::oscillator_processing_callback,
+                   oscillator_selection_t::oscillator_g, std::ref(sample_size),
+                   std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration), selected_oscs_g);
 
     auto wave_a = osc_a_carrier_future.get();
     auto wave_b = osc_b_carrier_future.get();
@@ -801,32 +838,31 @@ public:
     auto wave_g = osc_g_carrier_future.get();
 
     if (configuration.apply_bitcrusher_effect) {
-       m_apply_bitcrusher_effect = true;
-       m_bitcrusher_gain_value = configuration.bitcrusher_gain_value;
-       if (m_bitcrusher_gain_value < 0.0 || m_bitcrusher_gain_value > 1.0) {
-          m_bitcrusher_gain_value = 1.0;
-       }
-       m_bitcrusher_wet_percent = configuration.bitcrusher_wet_percentage;
-    }
-    else {
+      m_apply_bitcrusher_effect = true;
+      m_bitcrusher_gain_value = configuration.bitcrusher_gain_value;
+      if (m_bitcrusher_gain_value < 0.0 || m_bitcrusher_gain_value > 1.0) {
+        m_bitcrusher_gain_value = 1.0;
+      }
+      m_bitcrusher_wet_percent = configuration.bitcrusher_wet_percentage;
+    } else {
       m_apply_bitcrusher_effect = false;
       m_bitcrusher_wet_percent = 1.0;
     }
 
     if (m_apply_bitcrusher_effect) {
-         const auto& lfo = configuration.lfo;
-         if (effects_type_t::bitcrusher_wet_percentage == lfo.effect_to_modulate) {
-             const double& frequency = lfo.frequency;
-             const wave_type_t& wave_type = lfo.wave_type;
-             const bool is_lfo = frequency <= 20.0; // 20hz or less is considered lfo
-             apply_osc_to_bitcrusher_wet_value(frequency, wave_type, is_lfo);
-         } 
-         else if (effects_type_t::bitcrusher_gain_value == lfo.effect_to_modulate) {
-             const double& frequency = lfo.frequency;
-             const wave_type_t& wave_type = lfo.wave_type;
-             const bool is_lfo = frequency <= 20.0; // 20hz or less is considered lfo
-             apply_osc_to_bitcrusher_gain_value(frequency, wave_type, is_lfo);
-         }
+      const auto &lfo = configuration.lfo;
+      if (effects_type_t::bitcrusher_wet_percentage == lfo.effect_to_modulate) {
+        const double &frequency = lfo.frequency;
+        const wave_type_t &wave_type = lfo.wave_type;
+        const bool is_lfo = frequency <= 20.0; // 20hz or less is considered lfo
+        apply_osc_to_bitcrusher_wet_value(frequency, wave_type, is_lfo);
+      } else if (effects_type_t::bitcrusher_gain_value ==
+                 lfo.effect_to_modulate) {
+        const double &frequency = lfo.frequency;
+        const wave_type_t &wave_type = lfo.wave_type;
+        const bool is_lfo = frequency <= 20.0; // 20hz or less is considered lfo
+        apply_osc_to_bitcrusher_gain_value(frequency, wave_type, is_lfo);
+      }
     }
 
     m_start_lfo_latch.count_down();
@@ -866,46 +902,55 @@ public:
                          m_apply_bitcrusher_effect ? (sample & 0x0f) : sample);
         break;
       case _16_BITS_PER_SAMPLE:
-        !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               (sample % (INT16_MAX / 4)))
-                                            : sample)
-                   : add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               (sample % (INT16_MAX / 4)))
-                                            : sample,
-                                        m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               (sample % (INT16_MAX / 4)))
-                                            : sample);
+        !is_stereo
+            ? add_16_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT16_MAX / 4)))
+                      : sample)
+            : add_16_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT16_MAX / 4)))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT16_MAX / 4)))
+                      : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (INT24_MAX / 8)))
-                                               : sample)
-                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (INT24_MAX / 8)))
-                                               : sample,
-                                           m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (INT24_MAX / 8)))
-                                               : sample);
+        !is_stereo
+            ? add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT24_MAX / 8)))
+                      : sample)
+            : add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT24_MAX / 8)))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * (sample % (INT24_MAX / 8)))
+                      : sample);
         break;
       case _32_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
-                                               : sample)
-                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
-                                               : sample,
-                                           m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % (static_cast<int64_t>(static_cast<double>(INT32_MAX) * m_bitcrusher_wet_percent))))
-                                               : sample);
+        !is_stereo
+            ? add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          (static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                                m_bitcrusher_wet_percent))))
+                      : sample)
+            : add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          (static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                                m_bitcrusher_wet_percent))))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          (static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                                m_bitcrusher_wet_percent))))
+                      : sample);
         break;
       default:
         m_lfo_terminate.store(true);
@@ -971,46 +1016,55 @@ public:
                          m_apply_bitcrusher_effect ? (sample & 0x0f) : sample);
         break;
       case _16_BITS_PER_SAMPLE:
-        !is_stereo ? add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               static_cast<int8_t>(sample))
-                                            : sample)
-                   : add_16_bits_sample(m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               static_cast<int8_t>(sample))
-                                            : sample,
-                                        m_apply_bitcrusher_effect
-                                            ? (m_bitcrusher_gain_value *
-                                               static_cast<int8_t>(sample))
-                                            : sample);
+        !is_stereo
+            ? add_16_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int8_t>(sample))
+                      : sample)
+            : add_16_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int8_t>(sample))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int8_t>(sample))
+                      : sample);
         break;
       case _24_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  static_cast<int16_t>(sample))
-                                               : sample)
-                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  static_cast<int16_t>(sample))
-                                               : sample,
-                                           m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  static_cast<int16_t>(sample))
-                                               : sample);
+        !is_stereo
+            ? add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int16_t>(sample))
+                      : sample)
+            : add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int16_t>(sample))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value * static_cast<int16_t>(sample))
+                      : sample);
         break;
       case _32_BITS_PER_SAMPLE:
-        !is_stereo ? add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
-                                               : sample)
-                   : add_24_32_bits_sample(m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
-                                               : sample,
-                                           m_apply_bitcrusher_effect
-                                               ? (m_bitcrusher_gain_value *
-                                                  (sample % static_cast<int64_t>(static_cast<double>(INT32_MAX)  * m_bitcrusher_wet_percent)))
-                                               : sample);
+        !is_stereo
+            ? add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                               m_bitcrusher_wet_percent)))
+                      : sample)
+            : add_24_32_bits_sample(
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                               m_bitcrusher_wet_percent)))
+                      : sample,
+                  m_apply_bitcrusher_effect
+                      ? (m_bitcrusher_gain_value *
+                         (sample %
+                          static_cast<int64_t>(static_cast<double>(INT32_MAX) *
+                                               m_bitcrusher_wet_percent)))
+                      : sample);
         break;
       default:
         m_lfo_terminate.store(true);
@@ -1069,203 +1123,224 @@ public:
     return frequency_domain;
   }
 
-  // Second parameter set to false if you want the bitmap to represent the true scale of the wavefile one sample is one pixel so its expensive but fun :)
-  // Third parameter if set to true (false is default) then draws the waveform shaded else it plots it without shading underneath the waveform
-  bool save_waveform_as_monochrome_bmp(const std::string& file_path, bool scale_down = true, bool shade_waveform = false) {
-      if (file_path.empty()) {
-          return false;
-      }
+  // Second parameter set to false if you want the bitmap to represent the true
+  // scale of the wavefile one sample is one pixel so its expensive but fun :)
+  // Third parameter if set to true (false is default) then draws the waveform
+  // shaded else it plots it without shading underneath the waveform
+  bool save_waveform_as_monochrome_bmp(const std::string &file_path,
+                                       bool scale_down = true,
+                                       bool shade_waveform = false) {
+    if (file_path.empty()) {
+      return false;
+    }
 
-      if (m_samples.empty()) {
-          return false;
-      }
-      constexpr const size_t default_width = 2048;
-      const size_t width = scale_down ?  
-          default_width : 
-          (m_samples.size() 
-            % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
-      const size_t height{128};
+    if (m_samples.empty()) {
+      return false;
+    }
+    constexpr const size_t default_width = 2048;
+    const size_t width =
+        scale_down
+            ? default_width
+            : (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
+               static_cast<size_t>(m_header.sample_rate));
+    const size_t height{128};
 
-      std::future<std::vector<std::vector<bool>>> bitmap_future = std::async(std::launch::async, [&]() {
-        std::vector<std::vector<bool>> bitmap;
-        for (size_t _ = 0; _ < height; _++) {
+    std::future<std::vector<std::vector<bool>>> bitmap_future =
+        std::async(std::launch::async, [&]() {
+          std::vector<std::vector<bool>> bitmap;
+          for (size_t _ = 0; _ < height; _++) {
             bitmap.emplace_back(width, false);
-        }
-        const size_t true_width = (m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate));
-        const size_t max_sample_count = !scale_down ? width : true_width;
-        for (size_t column = 0; column < max_sample_count; column++) {
-          size_t true_column = !scale_down ? column : static_cast<size_t>(static_cast<double>(width - 1) 
-                        * (static_cast<double>(column) / static_cast<double>(max_sample_count)));
-          size_t row = static_cast<size_t>(static_cast<double>(height) 
-                                        * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
-          if (row >= height) {
+          }
+          const size_t true_width =
+              (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
+               static_cast<size_t>(m_header.sample_rate));
+          const size_t max_sample_count = !scale_down ? width : true_width;
+          for (size_t column = 0; column < max_sample_count; column++) {
+            size_t true_column =
+                !scale_down ? column
+                            : static_cast<size_t>(
+                                  static_cast<double>(width - 1) *
+                                  (static_cast<double>(column) /
+                                   static_cast<double>(max_sample_count)));
+            size_t row = static_cast<size_t>(
+                static_cast<double>(height) *
+                ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
+            if (row >= height) {
               continue;
-          }
+            }
 
-          if (!shade_waveform) { 
-            //Plot the main pixel and surrounding pixels to make it thicker
-            if (row > 0) {
-              bitmap[row-1][true_column] = true;
-            }
-            if (row > 0 && true_column > 0) {
-              bitmap[row-1][true_column-1] = true;
-            }
-            bitmap[row][true_column] = true;
-            if ((row+1) < height) {
-              bitmap[row+1][true_column] = true;
-            }
-            if ((true_column + 1) < max_sample_count) {
-              bitmap[row][true_column+1] = true;
-            }
-            if (((row+1) < height) && ((true_column+1) < max_sample_count)) {
-              bitmap[row+1][true_column+1] = true;
-            }
-          }
-          else {
-            //Just shade the waveform below 
-            for(row += 1; row < height; row++) {
+            if (!shade_waveform) {
+              // Plot the main pixel and surrounding pixels to make it thicker
+              if (row > 0) {
+                bitmap[row - 1][true_column] = true;
+              }
+              if (row > 0 && true_column > 0) {
+                bitmap[row - 1][true_column - 1] = true;
+              }
+              bitmap[row][true_column] = true;
+              if ((row + 1) < height) {
+                bitmap[row + 1][true_column] = true;
+              }
+              if ((true_column + 1) < max_sample_count) {
+                bitmap[row][true_column + 1] = true;
+              }
+              if (((row + 1) < height) &&
+                  ((true_column + 1) < max_sample_count)) {
+                bitmap[row + 1][true_column + 1] = true;
+              }
+            } else {
+              // Just shade the waveform below
+              for (row += 1; row < height; row++) {
                 bitmap[row][true_column] = true;
+              }
             }
           }
+          return bitmap;
+        });
 
-        }
-        return bitmap;
-      });
+    std::vector<uint8_t> bytes;
+    bytes.reserve(width * height * 4);
+    bitmap_header_t header{};
+    header.magic_field[0] = 'B';
+    header.magic_field[1] = 'M';
+    header.offset_to_pixels = sizeof(bitmap_header_t);
+    header.header_size = 40;
+    header.width = width;
+    header.height = height;
+    header.plane_count = 1;
+    header.bits_per_pixel = 32;
+    header.compression_method =
+        0; // No compression just store the 3 byte rgb values
+    header.horizontal_resolution = 1;
+    header.vertical_resolution = 1;
+    header.color_pallete_count = 0;
+    header.important_colors_used = 0;
 
-      std::vector<uint8_t> bytes;
-      bytes.reserve(width * height * 4);
-      bitmap_header_t header{};
-      header.magic_field[0] = 'B';
-      header.magic_field[1] = 'M';
-      header.offset_to_pixels = sizeof(bitmap_header_t);
-      header.header_size = 40;
-      header.width = width;
-      header.height = height;
-      header.plane_count = 1;
-      header.bits_per_pixel = 32;
-      header.compression_method = 0; // No compression just store the 3 byte rgb values
-      header.horizontal_resolution = 1;
-      header.vertical_resolution = 1;
-      header.color_pallete_count = 0;
-      header.important_colors_used = 0;
+    auto waveform_file_handle = fopen(file_path.c_str(), "wb");
 
-      auto waveform_file_handle = fopen(file_path.c_str(), "wb");
-     
-      if (nullptr == waveform_file_handle) {
-        return false;
-      }
+    if (nullptr == waveform_file_handle) {
+      return false;
+    }
 
-      header.data_size = sizeof(bitmap_header_t) + (width * height * 4);
-     
-      size_t expected_bytes = sizeof(header);
-      size_t written_bytes =
-          fwrite(reinterpret_cast<uint8_t*>(&header), sizeof(uint8_t),
-                sizeof(header), waveform_file_handle);
-     
-      if (expected_bytes != written_bytes) {
-          return false;
-      }
+    header.data_size = sizeof(bitmap_header_t) + (width * height * 4);
 
-      auto bitmap = bitmap_future.get();
+    size_t expected_bytes = sizeof(header);
+    size_t written_bytes =
+        fwrite(reinterpret_cast<uint8_t *>(&header), sizeof(uint8_t),
+               sizeof(header), waveform_file_handle);
 
-      bool flip{false}; // Used to alternate color pixel
+    if (expected_bytes != written_bytes) {
+      return false;
+    }
 
-      for(auto& row : bitmap) {
-          for(bool column : row) {
-              if (column) { // If this x y is set to true then we insert a black pixel (0x00 0x00 0x00 0xFF)
-                  bytes.push_back(0x00); // blue
-                  bytes.push_back(flip ? 0xff : 0x00); // green
-                  bytes.push_back(0x00); // red
-                  bytes.push_back(0xff); // alpha
-                  if (!shade_waveform) {
-                    flip ^= true;
-                  }
-              }
-              else { // Draw default white pixel (0xff 0xff 0xff 0xff)
-                  bytes.push_back(0xff); // blue
-                  bytes.push_back(0xff); // green
-                  bytes.push_back(0xff); // red
-                  bytes.push_back(0xff); // alpha
-              }
+    auto bitmap = bitmap_future.get();
+
+    bool flip{false}; // Used to alternate color pixel
+
+    for (auto &row : bitmap) {
+      for (bool column : row) {
+        if (column) { // If this x y is set to true then we insert a black pixel
+                      // (0x00 0x00 0x00 0xFF)
+          bytes.push_back(0x00);               // blue
+          bytes.push_back(flip ? 0xff : 0x00); // green
+          bytes.push_back(0x00);               // red
+          bytes.push_back(0xff);               // alpha
+          if (!shade_waveform) {
+            flip ^= true;
           }
+        } else { // Draw default white pixel (0xff 0xff 0xff 0xff)
+          bytes.push_back(0xff); // blue
+          bytes.push_back(0xff); // green
+          bytes.push_back(0xff); // red
+          bytes.push_back(0xff); // alpha
+        }
       }
+    }
 
-      expected_bytes += bytes.size();
-      written_bytes +=
-          fwrite(bytes.data(), sizeof(uint8_t),
-                bytes.size(), waveform_file_handle);
-     
-      return expected_bytes == written_bytes;
-      
+    expected_bytes += bytes.size();
+    written_bytes += fwrite(bytes.data(), sizeof(uint8_t), bytes.size(),
+                            waveform_file_handle);
+
+    return expected_bytes == written_bytes;
   }
 
-  bool save_waveform_as_grayscale_pbm(const std::string& file_path) { //Function is slow even as async use above function windows bitmap -- this is just for legacy fun :)
-      
-     if (file_path.empty()) {
-          return false;
-     }
+  bool save_waveform_as_grayscale_pbm(
+      const std::string
+          &file_path) { // Function is slow even as async use above function
+                        // windows bitmap -- this is just for legacy fun :)
 
-      if (m_samples.empty()) {
-          return false;
-      }
+    if (file_path.empty()) {
+      return false;
+    }
 
-      const size_t width = m_samples.size() % static_cast<size_t>(m_header.sample_rate) + static_cast<size_t>(m_header.sample_rate);
-      const size_t height{128};
-      
-      std::future<std::vector<std::vector<bool>>> bitmap_future = std::async(std::launch::async, [&]() {
-        std::vector<std::vector<bool>> bitmap;
-        for (size_t _ = 0; _ < height; _++) {
+    if (m_samples.empty()) {
+      return false;
+    }
+
+    const size_t width =
+        m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
+        static_cast<size_t>(m_header.sample_rate);
+    const size_t height{128};
+
+    std::future<std::vector<std::vector<bool>>> bitmap_future =
+        std::async(std::launch::async, [&]() {
+          std::vector<std::vector<bool>> bitmap;
+          for (size_t _ = 0; _ < height; _++) {
             bitmap.emplace_back(width, false);
-        }
-        for (size_t column = 0; column < width; column++) {
-          size_t row = static_cast<size_t>(static_cast<double>(height) * ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
-          if (row >= height) {
+          }
+          for (size_t column = 0; column < width; column++) {
+            size_t row = static_cast<size_t>(
+                static_cast<double>(height) *
+                ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
+            if (row >= height) {
               continue;
-          }
-          bitmap[row][column] = true;
-          for(row += 1; row < height; row++) {
+            }
+            bitmap[row][column] = true;
+            for (row += 1; row < height; row++) {
               bitmap[row][column] = true;
+            }
           }
-        }
-        return bitmap;
-      });
-      
-      auto bitmap = bitmap_future.get();
-      std::vector<std::future<std::string>> column_futures;
-      for(size_t row = 0; row < height; row++) {
-          column_futures.push_back(std::async(std::launch::async, [&width, row, &bitmap]() {
+          return bitmap;
+        });
+
+    auto bitmap = bitmap_future.get();
+    std::vector<std::future<std::string>> column_futures;
+    for (size_t row = 0; row < height; row++) {
+      column_futures.push_back(
+          std::async(std::launch::async, [&width, row, &bitmap]() {
             std::string result;
             for (size_t column = 0; column < width; column++) {
-                  result += std::format("{} ", bitmap[row][column] ? "1" : "0");
+              result += std::format("{} ", bitmap[row][column] ? "1" : "0");
             }
             result += "\n";
             return result;
           }));
-      }
+    }
 
-      std::string pbm_header = std::format("P1\n#Generated by wave_t on {}\n{} {}\n", static_cast<size_t>(time(nullptr)),  width, height);
-      std::stringstream pbm_data;
-      pbm_data << pbm_header;
+    std::string pbm_header =
+        std::format("P1\n#Generated by wave_t on {}\n{} {}\n",
+                    static_cast<size_t>(time(nullptr)), width, height);
+    std::stringstream pbm_data;
+    pbm_data << pbm_header;
 
-      for(auto& future : column_futures) {
-           pbm_data << future.get();
-      }
-     
-      auto data = pbm_data.str();
-      auto waveform_file_handle = fopen(file_path.c_str(), "wb");
-     
-      if (nullptr == waveform_file_handle) {
-        return false;
-      }
-     
-      const size_t expected_bytes = data.size();
-      size_t written_bytes =
-          fwrite(data.data(), sizeof(int8_t),
-                data.size(), waveform_file_handle);
+    for (auto &future : column_futures) {
+      pbm_data << future.get();
+    }
 
-      fclose(waveform_file_handle);
-     
-      return expected_bytes == written_bytes;
+    auto data = pbm_data.str();
+    auto waveform_file_handle = fopen(file_path.c_str(), "wb");
+
+    if (nullptr == waveform_file_handle) {
+      return false;
+    }
+
+    const size_t expected_bytes = data.size();
+    size_t written_bytes =
+        fwrite(data.data(), sizeof(int8_t), data.size(), waveform_file_handle);
+
+    fclose(waveform_file_handle);
+
+    return expected_bytes == written_bytes;
   }
 
 #ifdef DEBUG
@@ -1301,22 +1376,23 @@ private:
   // Used for saving wave forms as bitmaps
   // Source: https://en.wikipedia.org/wiki/BMP_file_format
   struct bitmap_header_t {
-      char magic_field[2];
-      uint32_t bitmap_total_size;
-      uint32_t reserved;
-      uint32_t offset_to_pixels;
-      uint32_t header_size;
-      int32_t width;
-      int32_t height;
-      uint16_t plane_count;
-      uint16_t bits_per_pixel;
-      uint32_t compression_method;
-      uint32_t data_size;
-      uint32_t horizontal_resolution;
-      uint32_t vertical_resolution;
-      uint32_t color_pallete_count;
-      uint32_t important_colors_used;
-  } __attribute__((packed));;
+    char magic_field[2];
+    uint32_t bitmap_total_size;
+    uint32_t reserved;
+    uint32_t offset_to_pixels;
+    uint32_t header_size;
+    int32_t width;
+    int32_t height;
+    uint16_t plane_count;
+    uint16_t bits_per_pixel;
+    uint32_t compression_method;
+    uint32_t data_size;
+    uint32_t horizontal_resolution;
+    uint32_t vertical_resolution;
+    uint32_t color_pallete_count;
+    uint32_t important_colors_used;
+  } __attribute__((packed));
+  ;
 
   // Used for saving 24-bit audio -- custom type
   struct int24_t {
@@ -1426,8 +1502,8 @@ private:
     size_t written_bytes =
         fwrite(reinterpret_cast<int8_t *>(&m_header), sizeof(int8_t),
                sizeof(m_header), wav_file_handle);
-    written_bytes += (fwrite(samples.data(), sizeof(int32_t),
-                             samples.size(), wav_file_handle) *
+    written_bytes += (fwrite(samples.data(), sizeof(int32_t), samples.size(),
+                             wav_file_handle) *
                       sizeof(int32_t));
     fclose(wav_file_handle);
     return written_bytes == expected_bytes;
@@ -1449,115 +1525,134 @@ private:
       max_sample_value = static_cast<size_t>(INT32_MAX);
       break;
     default:
-      max_sample_value = static_cast<size_t>(
-          CHAR_MAX); 
+      max_sample_value = static_cast<size_t>(CHAR_MAX);
       break;
     }
     return max_sample_value;
   }
 
-  // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet precentage value the oscillator can be of the various waves defined in wave_type_t
-  void apply_osc_to_bitcrusher_wet_value(double frequency, const wave_type_t wave_type, bool is_lfo = false) {
-      
-      if (!m_apply_bitcrusher_effect) {
-          return;
-      }
+  // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet
+  // precentage value the oscillator can be of the various waves defined in
+  // wave_type_t
+  void apply_osc_to_bitcrusher_wet_value(double frequency,
+                                         const wave_type_t wave_type,
+                                         bool is_lfo = false) {
 
-      if (is_lfo && frequency > 20) {
-         frequency = 1.0;
-      }
+    if (!m_apply_bitcrusher_effect) {
+      return;
+    }
 
-      if (frequency < 0.0) {
-          frequency = 1.0;
-      }
-      
-      m_lfo_terminate.store(false);
-      m_lfo_future = std::async(std::launch::async, [&]() {
-        m_start_lfo_latch.wait();
-        double time = 0.0;
-        constexpr const double volume{1.0};
-        constexpr const double phase {0.0};
-        while(!m_lfo_terminate.load()) {
+    if (is_lfo && frequency > 20) {
+      frequency = 1.0;
+    }
 
-          if (wave_type == wave_type_t::linear) {
-            if (m_bitcrusher_wet_percent > 1.0) {
-               m_bitcrusher_wet_percent = 0.01;
-            }
-            if (m_bitcrusher_wet_percent < 0.02) {
-              m_bitcrusher_wet_percent = 1.0;
-            }
-            m_bitcrusher_wet_percent -= 0.01;
-            //Convert frequency to period and use that as thread sleep value
-            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
-            continue;
-          }
-          else if (wave_type == wave_type_t::sawtooth) {
-            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_saw_tooth(time, volume, frequency))) / static_cast<double>(INT32_MAX);
-          }
-          else if (wave_type == wave_type_t::square) {
-            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_square(time, volume, frequency))) / static_cast<double>(INT32_MAX);
-          }
-          else if (wave_type == wave_type_t::sine) {
-            m_bitcrusher_wet_percent = std::abs(static_cast<double>(helper::pcm_sine(frequency, time, volume, phase))) / static_cast<double>(INT32_MAX);
-          }
+    if (frequency < 0.0) {
+      frequency = 1.0;
+    }
 
-          time += std::numeric_limits<double>::lowest();
-          std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    m_lfo_terminate.store(false);
+    m_lfo_future = std::async(std::launch::async, [&]() {
+      m_start_lfo_latch.wait();
+      double time = 0.0;
+      constexpr const double volume{1.0};
+      constexpr const double phase{0.0};
+      while (!m_lfo_terminate.load()) {
+
+        if (wave_type == wave_type_t::linear) {
+          if (m_bitcrusher_wet_percent > 1.0) {
+            m_bitcrusher_wet_percent = 0.01;
+          }
+          if (m_bitcrusher_wet_percent < 0.02) {
+            m_bitcrusher_wet_percent = 1.0;
+          }
+          m_bitcrusher_wet_percent -= 0.01;
+          // Convert frequency to period and use that as thread sleep value
+          std::this_thread::sleep_for(std::chrono::milliseconds(
+              static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
+          continue;
+        } else if (wave_type == wave_type_t::sawtooth) {
+          m_bitcrusher_wet_percent =
+              std::abs(static_cast<double>(
+                  helper::pcm_saw_tooth(time, volume, frequency))) /
+              static_cast<double>(INT32_MAX);
+        } else if (wave_type == wave_type_t::square) {
+          m_bitcrusher_wet_percent =
+              std::abs(static_cast<double>(
+                  helper::pcm_square(time, volume, frequency))) /
+              static_cast<double>(INT32_MAX);
+        } else if (wave_type == wave_type_t::sine) {
+          m_bitcrusher_wet_percent =
+              std::abs(static_cast<double>(
+                  helper::pcm_sine(frequency, time, volume, phase))) /
+              static_cast<double>(INT32_MAX);
         }
-      });
+
+        time += std::numeric_limits<double>::lowest();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      }
+    });
   }
 
-    // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet precentage value the oscillator can be of the various waves defined in wave_type_t
-  void apply_osc_to_bitcrusher_gain_value(double frequency, const wave_type_t wave_type, bool is_lfo = false) {
-      
-      if (!m_apply_bitcrusher_effect) {
-          return;
-      }
+  // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet
+  // precentage value the oscillator can be of the various waves defined in
+  // wave_type_t
+  void apply_osc_to_bitcrusher_gain_value(double frequency,
+                                          const wave_type_t wave_type,
+                                          bool is_lfo = false) {
 
-      if (is_lfo && frequency > 20) {
-         frequency = 1.0;
-      }
+    if (!m_apply_bitcrusher_effect) {
+      return;
+    }
 
-      if (frequency < 0.0) {
-          frequency = 1.0;
-      }
-      
-      m_lfo_terminate.store(false);
-      m_lfo_future = std::async(std::launch::async, [&]() {
-        m_start_lfo_latch.wait();
-        double time = 0.0;
-        constexpr const double volume{1.0};
-        constexpr const double phase {0.0};
-        while(!m_lfo_terminate.load()) {
+    if (is_lfo && frequency > 20) {
+      frequency = 1.0;
+    }
 
-          if (wave_type == wave_type_t::linear) {
-            if (m_bitcrusher_gain_value > 1.0) {
-               m_bitcrusher_gain_value = 0.01;
-            }
-            if (m_bitcrusher_gain_value < 0.02) {
-              m_bitcrusher_gain_value = 1.0;
-            }
-            m_bitcrusher_gain_value -= 0.01;
-            //Convert frequency to period and use that as thread sleep value
-            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
-            continue;
-          }
-          else if (wave_type == wave_type_t::sawtooth) {
-            m_bitcrusher_gain_value = std::abs(static_cast<double>(helper::pcm_saw_tooth(time, volume, frequency))) / static_cast<double>(INT32_MAX);
-          }
-          else if (wave_type == wave_type_t::square) {
-            m_bitcrusher_gain_value = std::abs(static_cast<double>(helper::pcm_square(time, volume, frequency))) / static_cast<double>(INT32_MAX);
-          }
-          else if (wave_type == wave_type_t::sine) {
-            m_bitcrusher_gain_value = std::abs(static_cast<double>(helper::pcm_sine(frequency, time, volume, phase))) / static_cast<double>(INT32_MAX);
-          }
+    if (frequency < 0.0) {
+      frequency = 1.0;
+    }
 
-          time += std::numeric_limits<double>::lowest();
-          std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    m_lfo_terminate.store(false);
+    m_lfo_future = std::async(std::launch::async, [&]() {
+      m_start_lfo_latch.wait();
+      double time = 0.0;
+      constexpr const double volume{1.0};
+      constexpr const double phase{0.0};
+      while (!m_lfo_terminate.load()) {
+
+        if (wave_type == wave_type_t::linear) {
+          if (m_bitcrusher_gain_value > 1.0) {
+            m_bitcrusher_gain_value = 0.01;
+          }
+          if (m_bitcrusher_gain_value < 0.02) {
+            m_bitcrusher_gain_value = 1.0;
+          }
+          m_bitcrusher_gain_value -= 0.01;
+          // Convert frequency to period and use that as thread sleep value
+          std::this_thread::sleep_for(std::chrono::milliseconds(
+              static_cast<size_t>(pow(frequency, -1.0) * 1000.0)));
+          continue;
+        } else if (wave_type == wave_type_t::sawtooth) {
+          m_bitcrusher_gain_value =
+              std::abs(static_cast<double>(
+                  helper::pcm_saw_tooth(time, volume, frequency))) /
+              static_cast<double>(INT32_MAX);
+        } else if (wave_type == wave_type_t::square) {
+          m_bitcrusher_gain_value =
+              std::abs(static_cast<double>(
+                  helper::pcm_square(time, volume, frequency))) /
+              static_cast<double>(INT32_MAX);
+        } else if (wave_type == wave_type_t::sine) {
+          m_bitcrusher_gain_value =
+              std::abs(static_cast<double>(
+                  helper::pcm_sine(frequency, time, volume, phase))) /
+              static_cast<double>(INT32_MAX);
         }
-      });
 
-
+        time += std::numeric_limits<double>::lowest();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      }
+    });
   }
 
   wave_header_t m_header;
@@ -1573,16 +1668,54 @@ private:
 
 // Not to be directly used but more for the wave_file_t to help generate nice
 // synth sounds!
-namespace processing_functions { 
+namespace processing_functions {
 
-
-std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* osc_to_process, const size_t &sample_size,
-                                   const double &volume, const bool &is_stereo,
-                                   const uint32_t &sample_rate,
-                                   synth_config_t &configuration, std::initializer_list<oscillator_config_t*> selected_oscs) {
+std::vector<int32_t> oscillator_processing_callback(
+    const oscillator_selection_t &osc_to_process, const size_t &sample_size,
+    const double &volume, const bool &is_stereo, const uint32_t &sample_rate,
+    synth_config_t &configuration,
+    std::initializer_list<oscillator_config_t *> selected_oscs) {
 
   std::vector<int32_t> samples;
-  if (nullptr == osc_to_process) {
+  oscillator_config_t* primary_osc{nullptr};
+
+  switch(osc_to_process) {
+    case oscillator_selection_t::oscillator_a: {
+      primary_osc = &configuration.oscillator_a;
+      break;
+    }
+    case oscillator_selection_t::oscillator_b: {
+      primary_osc = &configuration.oscillator_b;
+      break;
+    }
+    case oscillator_selection_t::oscillator_c: {
+      primary_osc = &configuration.oscillator_c;
+      break;
+    }
+    case oscillator_selection_t::oscillator_d: {
+      primary_osc = &configuration.oscillator_d;
+      break;
+    }
+    case oscillator_selection_t::oscillator_e: {
+      primary_osc = &configuration.oscillator_e;
+      break;
+    }
+    case oscillator_selection_t::oscillator_f: {
+      primary_osc = &configuration.oscillator_f;
+      break;
+    }
+    case oscillator_selection_t::oscillator_g: {
+      primary_osc = &configuration.oscillator_g;
+      break;
+    }
+    default: {
+      primary_osc = nullptr;
+      break;
+    }
+  }
+
+  if ((nullptr == primary_osc) 
+          && (primary_osc->operator_type != oscillator_type_t::carrier)) {
       return samples;
   }
 
@@ -1593,17 +1726,18 @@ std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* o
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_a.initial_phase_offset;
+    double phase_offset = primary_osc->initial_phase_offset;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
-    for (auto& selected_osc : selected_oscs) {
+    for (auto &selected_osc : selected_oscs) {
 
       if (nullptr == selected_osc) {
         continue;
       }
 
-      if (selected_osc != osc_to_process) {
+      if (selected_osc->osc_to_modulate !=
+          osc_to_process) {
         continue;
       }
 
@@ -1653,28 +1787,28 @@ std::vector<int32_t> oscillator_processing_callback(const oscillator_config_t* o
       }
       }
     }
-
+    
     const auto wave_type =
-        static_cast<uint8_t>(configuration.oscillator_a.wave_type);
+        static_cast<uint8_t>(primary_osc->wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
       sample += helper::pcm_sine(
-          configuration.oscillator_a.frequency + frequency_offset, time,
+          primary_osc->frequency + frequency_offset, time,
           volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,
-                                     configuration.oscillator_a.frequency +
+                                     primary_osc->frequency +
                                          frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
       sample += helper::pcm_square(time, volume + amplitude_offset,
-                                   configuration.oscillator_a.frequency +
+                                   primary_osc->frequency +
                                        frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
       sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
-                                      configuration.oscillator_a.frequency +
+                                      primary_osc->frequency +
                                           frequency_offset);
     }
 
@@ -2001,7 +2135,8 @@ std::vector<int32_t> osciallator_c(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_c.initial_phase_offset;;
+    double phase_offset = configuration.oscillator_c.initial_phase_offset;
+    ;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2145,7 +2280,8 @@ std::vector<int32_t> osciallator_d(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_d.initial_phase_offset;;
+    double phase_offset = configuration.oscillator_d.initial_phase_offset;
+    ;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2289,7 +2425,8 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_e.initial_phase_offset;;
+    double phase_offset = configuration.oscillator_e.initial_phase_offset;
+    ;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2340,20 +2477,16 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        offset +=
-            helper::pcm_sine(modulating_frequency, time, volume, phase);
+        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        offset +=
-            helper::pcm_triangle(time, volume, modulating_frequency);
+        offset += helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        offset +=
-            helper::pcm_square(time, volume, modulating_frequency);
+        offset += helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        offset +=
-            helper::pcm_saw_tooth(time, volume, modulating_frequency);
+        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
 
       if (modulation_amplitude <= 0.0) {
@@ -2390,9 +2523,9 @@ std::vector<int32_t> osciallator_e(const size_t &sample_size,
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
-      sample += helper::pcm_sine(configuration.oscillator_d.frequency +
-                                     frequency_offset,
-                                 time, volume + amplitude_offset, phase + phase_offset);
+      sample += helper::pcm_sine(
+          configuration.oscillator_d.frequency + frequency_offset, time,
+          volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,
@@ -2437,7 +2570,8 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_f.initial_phase_offset;;
+    double phase_offset = configuration.oscillator_f.initial_phase_offset;
+    ;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2488,20 +2622,16 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        offset +=
-            helper::pcm_sine(modulating_frequency, time, volume, phase);
+        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        offset +=
-            helper::pcm_triangle(time, volume, modulating_frequency);
+        offset += helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        offset +=
-            helper::pcm_square(time, volume, modulating_frequency);
+        offset += helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        offset +=
-            helper::pcm_saw_tooth(time, volume, modulating_frequency);
+        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
 
       if (modulation_amplitude <= 0.0) {
@@ -2538,9 +2668,9 @@ std::vector<int32_t> osciallator_f(const size_t &sample_size,
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
-      sample += helper::pcm_sine(configuration.oscillator_d.frequency +
-                                     frequency_offset,
-                                 time, volume + amplitude_offset, phase + phase_offset);
+      sample += helper::pcm_sine(
+          configuration.oscillator_d.frequency + frequency_offset, time,
+          volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,
@@ -2585,7 +2715,8 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
     int64_t sample{};
     double offset{};
     double frequency_offset{};
-    double phase_offset = configuration.oscillator_g.initial_phase_offset;;
+    double phase_offset = configuration.oscillator_g.initial_phase_offset;
+    ;
     double amplitude_offset{};
     double modulation_amplitude{};
     bool ring_modulation{false};
@@ -2636,20 +2767,16 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        offset +=
-            helper::pcm_sine(modulating_frequency, time, volume, phase);
+        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        offset +=
-            helper::pcm_triangle(time, volume, modulating_frequency);
+        offset += helper::pcm_triangle(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        offset +=
-            helper::pcm_square(time, volume, modulating_frequency);
+        offset += helper::pcm_square(time, volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        offset +=
-            helper::pcm_saw_tooth(time, volume, modulating_frequency);
+        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
       }
 
       if (modulation_amplitude <= 0.0) {
@@ -2686,9 +2813,9 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
         static_cast<uint8_t>(configuration.oscillator_d.wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
-      sample += helper::pcm_sine(configuration.oscillator_d.frequency +
-                                     frequency_offset,
-                                 time, volume + amplitude_offset, phase + phase_offset);
+      sample += helper::pcm_sine(
+          configuration.oscillator_d.frequency + frequency_offset, time,
+          volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,

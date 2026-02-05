@@ -76,8 +76,8 @@ int main(int arguments_size, char **arguments) {
     std::cout << "Failed to save 16-bit generated wav file" << std::endl;
   }
 
-  constexpr const bool scale_down_image{true};  // Default is true for performance 
-  constexpr const bool shade_waveform{false};
+  constexpr const bool scale_down_image{false};  // Default is true for performance 
+  constexpr const bool shade_waveform{true};
   if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image, shade_waveform)) {
         std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
