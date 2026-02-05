@@ -174,7 +174,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Uncomment line below to get alternative synth demo")
-#define AM_PM_MODULATION_DEMO
+//#define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
