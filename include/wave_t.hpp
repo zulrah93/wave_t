@@ -712,46 +712,50 @@ public:
     std::vector<int32_t> output;
     output.reserve(sample_size);
 
-    // auto osc_a_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_a,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+  #ifdef NOT_REFACTORED
 
-    // auto osc_b_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_b,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+    auto osc_a_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_a,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
 
-    // auto osc_c_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_c,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+    auto osc_b_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_b,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
 
-    // auto osc_d_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_d,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+    auto osc_c_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_c,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
 
-    // auto osc_e_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_e,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
-    // auto osc_f_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_f,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+    auto osc_d_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_d,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
 
-    // auto osc_g_carrier_future =
-    //     std::async(std::launch::async, &processing_functions::osciallator_g,
-    //                std::ref(sample_size), std::ref(volume),
-    //                std::ref(is_stereo), std::ref(sample_rate),
-    //                std::ref(configuration));
+    auto osc_e_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_e,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
+    auto osc_f_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_f,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
+
+    auto osc_g_carrier_future =
+        std::async(std::launch::async, &processing_functions::osciallator_g,
+                   std::ref(sample_size), std::ref(volume),
+                   std::ref(is_stereo), std::ref(sample_rate),
+                   std::ref(configuration));
+
+  #else
 
     const auto selected_oscs_a = {
         &configuration.oscillator_b, &configuration.oscillator_c,
@@ -828,6 +832,7 @@ public:
                    oscillator_selection_t::oscillator_g, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_g);
+  #endif
 
     auto wave_a = osc_a_carrier_future.get();
     auto wave_b = osc_b_carrier_future.get();
@@ -1670,6 +1675,8 @@ private:
 // synth sounds!
 namespace processing_functions {
 
+#ifndef NOT_REFACTORED
+
 std::vector<int32_t> oscillator_processing_callback(
     const oscillator_selection_t &osc_to_process, const size_t &sample_size,
     const double &volume, const bool &is_stereo, const uint32_t &sample_rate,
@@ -1714,9 +1721,11 @@ std::vector<int32_t> oscillator_processing_callback(
     }
   }
 
-  if ((nullptr == primary_osc) 
-          && (primary_osc->operator_type != oscillator_type_t::carrier)) {
+  if (nullptr == primary_osc) {
       return samples;
+  }
+  if (primary_osc->operator_type != oscillator_type_t::carrier) {
+     return samples;
   }
 
   samples.reserve(sample_size);
@@ -1824,6 +1833,8 @@ std::vector<int32_t> oscillator_processing_callback(
 
   return samples;
 }
+
+#else
 
 std::vector<int32_t> osciallator_a(const size_t &sample_size,
                                    const double &volume, const bool &is_stereo,
@@ -2844,6 +2855,9 @@ std::vector<int32_t> osciallator_g(const size_t &sample_size,
   }
   return samples;
 }
+
+#endif
+
 } // namespace processing_functions
 
 #endif
