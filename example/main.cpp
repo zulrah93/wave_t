@@ -174,7 +174,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Uncomment line below to get alternative synth demo")
-//#define AM_PM_MODULATION_DEMO
+#define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
@@ -266,7 +266,7 @@ int main(int arguments_size, char **arguments) {
   constexpr const double E4_FREQUENCY{329.6276};
 
   configuration.oscillator_a.operator_type = carrier;
-  configuration.oscillator_a.wave_type = wave_type_t::sine;
+  configuration.oscillator_a.wave_type = wave_type_t::square;
   configuration.oscillator_a.frequency = C4_FREQUENCY;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
@@ -313,7 +313,7 @@ int main(int arguments_size, char **arguments) {
       oscillator_selection_t::oscillator_e;
   configuration.oscillator_g.modulation_amplitude = 1.50;
 
-  constexpr const double seconds{1.55};
+  constexpr const double seconds{4.25};
 
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));

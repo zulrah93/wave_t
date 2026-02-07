@@ -1088,7 +1088,7 @@ public:
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
                 static_cast<double>(height) *
-                ((index_as_double(column).value_or(-1.0) + 1.0) / 2.0));
+                ((index_as_double(column).value_or(0.0) + 1.0) / 2.0));
             if (row >= height) {
               continue;
             }
