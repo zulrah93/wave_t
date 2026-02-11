@@ -30,6 +30,7 @@
 #define WAVE_T_HPP
 
 #include <bit>
+#include <bitset>
 #include <cfenv>
 #include <climits>
 #include <cmath>
@@ -1051,17 +1052,19 @@ public:
   // scale of the wavefile one sample is one pixel so its expensive but fun :)
   // Third parameter if set to true (false is default) then draws the waveform
   // shaded else it plots it without shading underneath the waveform
+  // Fourth parameter directs a pc screen font file path to also render the text (fifth) if empty string then displa_filename is treated as if it were false
   bool save_waveform_as_monochrome_bmp(const std::string &file_path,
                                        bool scale_down = true,
-                                       bool shade_waveform = false) {
+                                       bool shade_waveform = false, bool display_filename = false, 
+                                       const char* pc_screenfont_file_path = nullptr, const char* text = nullptr) {
     if (file_path.empty()) {
       return false;
     }
-
     if (m_samples.empty()) {
       return false;
     }
-    constexpr const size_t default_width = 2048;
+
+    constexpr const size_t default_width{2048};
     const size_t width =
         scale_down
             ? default_width
@@ -1119,6 +1122,37 @@ public:
               }
             }
           }
+
+          if (display_filename) {
+            psf_header_t font_header{};
+            std::vector<uint8_t> glyphs_raw_buffer;
+            if (load_psf2_font(pc_screenfont_file_path, font_header, glyphs_raw_buffer)) {
+                if (nullptr != text) {
+                    size_t row_offset{4}; // y
+                    size_t column_offset{0}; // x
+                    for(size_t index = 0; index < strlen(text); index++) {
+                        const size_t char_index{static_cast<size_t>(text[index])};
+                        if (char_index >= font_header.glyph_size) {
+                            continue;
+                        }
+                        const size_t glyph_index{char_index * font_header.bytes_per_glyph};
+                        const size_t ending_index{glyph_index + font_header.bytes_per_glyph}; 
+                        if (ending_index >= glyphs_raw_buffer.size()) {
+                            continue;
+                        }
+                        if (font_header.bytes_per_glyph <= sizeof(uint64_t)) {
+                            std::bitset<sizeof(uint64_t)> glyph_as_bitset((glyphs_raw_buffer[glyph_index + 3] << 24)
+                               | (glyphs_raw_buffer[glyph_index + 2] << 16) | (glyphs_raw_buffer[glyph_index + 1] << 8) 
+                                | glyphs_raw_buffer[glyph_index]);
+                                //TODO: Index bitset and see which bits are set to set the pixels in the bitmap
+                        }
+                        row_offset += font_header.glyph_height;
+                        column_offset += font_header.glyph_width;                        
+                    }
+                }
+            }
+          }
+
           return bitmap;
         });
 
@@ -1297,7 +1331,8 @@ public:
 #endif
 
 private:
-  // Used for saving wave forms as bitmaps
+  static constexpr uint32_t PSF_FONT_MAGIC{0x72b54a86}; // Used to validate font header's magic number
+  // Used for saving wave forms as bitmaps -- used internally
   // Source: https://en.wikipedia.org/wiki/BMP_file_format
   struct bitmap_header_t {
     char magic_field[2];
@@ -1316,14 +1351,82 @@ private:
     uint32_t color_pallete_count;
     uint32_t important_colors_used;
   } __attribute__((packed));
-  ;
+  
+  //Source: https://en.wikipedia.org/wiki/PC_Screen_Font
+  // Used to render text when rendering waveform -- used internally 
+  struct psf_header_t {
+        uint32_t magic;
+        uint32_t version;
+        uint32_t this_header_size; // Note: Will be always set to sizeof(psf_header_t) 
+        uint32_t has_unicode_table;
+        uint32_t glyph_size; // 
+        uint32_t bytes_per_glyph;
+        uint32_t glyph_height;
+        uint32_t glyph_width;
+
+  }; // We don't need to pack hurray or could we?
 
   // Used for saving 24-bit audio -- custom type
   struct int24_t {
     int8_t byte1;
     int8_t byte2;
     int8_t byte3;
-  };
+  }; // Same as here -- do we oack here?
+
+  //Internal helper function -- second and third parameter are out parameter please check return value before checking those out values
+  static bool load_psf2_font(const char* file_path, psf_header_t& header, std::vector<uint8_t>& glyphs_raw_data) {
+
+    if (nullptr == file_path) {
+#ifdef DEBUG
+      std::cout << "Passed null file path!!" << std::endl;
+#endif
+        return false;
+    }
+    
+    auto psf_file_handle = fopen(file_path, "rb");
+    
+    if (nullptr == psf_file_handle) {
+#ifdef DEBUG
+      std::cout << "Failed to open PC screen font!!" << std::endl;
+#endif
+      return false;
+    }
+
+#ifdef DEBUG
+    std::cout << "\033[01;34mLoaded PC screen font at " << file_path << std::endl;
+#endif
+    
+    constexpr const size_t max_file_size{65536};
+    
+    glyphs_raw_data.reserve(max_file_size);
+    
+    uint8_t* temp_buffer = new uint8_t[max_file_size]; // Don't think pc screen fonts go behind 2K
+    memset(temp_buffer, '\0', sizeof(temp_buffer));
+
+    size_t bytes_read =
+          fread(temp_buffer, sizeof(uint8_t), max_file_size, psf_file_handle);
+
+    memcpy(&header, reinterpret_cast<psf_header_t*>(temp_buffer), sizeof(psf_header_t));
+
+#ifdef DEBUG
+
+    std::cout << "glyph_size=" << header.glyph_size << std::endl;
+    std::cout << "bytes_per_glyph=" << header.bytes_per_glyph << std::endl;
+    std::cout << "glyph_height=" << header.glyph_height << std::endl;
+    std::cout << "glyph_width=" << header.glyph_width << "\033[0m" << std::endl;
+#endif
+
+    //Starting after the header so we can load those glyphs into a vector (much more friendler)
+    for(size_t index = sizeof(psf_header_t); index < bytes_read; index++) {
+        glyphs_raw_data.push_back(temp_buffer[index]);
+    }
+    
+    fclose(psf_file_handle);
+    
+    delete[] temp_buffer;
+
+    return bytes_read > 0;
+  }
 
   static constexpr int24_t make_int24_t(const int32_t &value) {
     int24_t _24_bit_value{};

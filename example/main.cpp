@@ -78,7 +78,9 @@ int main(int arguments_size, char **arguments) {
 
   constexpr const bool scale_down_image{true};  // Default is true for performance 
   constexpr const bool shade_waveform{false};
-  if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image, shade_waveform)) {
+  constexpr const bool print_text{true};
+  const char* pc_screenfont_file_path = "/home/danny/fonts/ter-powerline-v32n.psf";
+  if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image, shade_waveform, print_text, pc_screenfont_file_path, "sine.bmp")) {
         std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
   }
 
