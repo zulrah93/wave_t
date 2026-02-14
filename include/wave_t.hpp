@@ -1097,14 +1097,14 @@ public:
             }
 
             if (!shade_waveform) {
-              // Plot the main pixel and surrounding pixels to make it thicker
+              //Plot the main pixel and surrounding pixels to make it thicker
               if (row > 0) {
                 bitmap[row - 1][true_column] = true;
               }
               if (row > 0 && true_column > 0) {
                 bitmap[row - 1][true_column - 1] = true;
               }
-              bitmap[row][true_column] = true;
+             bitmap[row][true_column] = true;
               if ((row + 1) < height) {
                 bitmap[row + 1][true_column] = true;
               }
@@ -1126,28 +1126,46 @@ public:
           if (display_filename) {
             psf_header_t font_header{};
             std::vector<uint8_t> glyphs_raw_buffer;
+            const size_t wrap_count{50}; // Draws to next line after 50 glpyhs rendered on the same bitmap line
+            size_t glyph_count{0};
             if (load_psf2_font(pc_screenfont_file_path, font_header, glyphs_raw_buffer)) {
-                if (nullptr != text) {
-                    size_t row_offset{4}; // y
-                    size_t column_offset{0}; // x
+                if (nullptr != text && !glyphs_raw_buffer.empty()) {
+                    size_t row_offset{0}; // y
+                    size_t column_offset{4}; // x
                     for(size_t index = 0; index < strlen(text); index++) {
+
                         const size_t char_index{static_cast<size_t>(text[index])};
+                        
                         if (char_index >= font_header.glyph_size) {
                             continue;
                         }
+
                         const size_t glyph_index{char_index * font_header.bytes_per_glyph};
-                        const size_t ending_index{glyph_index + font_header.bytes_per_glyph}; 
-                        if (ending_index >= glyphs_raw_buffer.size()) {
-                            continue;
+                        
+                        std::vector<std::bitset<8>> rows_as_bits;
+                        rows_as_bits.reserve(font_header.glyph_height); 
+
+                        for (size_t row = glyph_index; row < (glyph_index + (font_header.bytes_per_glyph)); row++) {
+                            rows_as_bits.emplace_back(glyphs_raw_buffer[row]);
                         }
-                        if (font_header.bytes_per_glyph <= sizeof(uint64_t)) {
-                            std::bitset<sizeof(uint64_t)> glyph_as_bitset((glyphs_raw_buffer[glyph_index + 3] << 24)
-                               | (glyphs_raw_buffer[glyph_index + 2] << 16) | (glyphs_raw_buffer[glyph_index + 1] << 8) 
-                                | glyphs_raw_buffer[glyph_index]);
-                                //TODO: Index bitset and see which bits are set to set the pixels in the bitmap
+
+                        for(size_t row = 0; row < font_header.glyph_height; row++) {
+                            auto& bits{rows_as_bits[row]};
+                            for (size_t column = 0; column < bits.size(); column++) {
+                                if (bits[column]) {
+                                    const size_t true_row{(height - 4) - row+row_offset};
+                                    const size_t true_column{column+column_offset};
+                                    bitmap[true_row][true_column] = true;
+                                }
+                            }
                         }
-                        row_offset += font_header.glyph_height;
-                        column_offset += font_header.glyph_width;                        
+
+                        if (wrap_count == glyph_count) {
+                          row_offset += (font_header.glyph_height + 1);
+                        }
+
+                        column_offset += (font_header.glyph_width); 
+                        glyph_count %= wrap_count;                       
                     }
                 }
             }
@@ -1193,19 +1211,13 @@ public:
 
     auto bitmap = bitmap_future.get();
 
-    bool flip{false}; // Used to alternate color pixel
-
     for (auto &row : bitmap) {
       for (bool column : row) {
-        if (column) { // If this x y is set to true then we insert a black pixel
-                      // (0x00 0x00 0x00 0xFF)
+        if (column) { // If this x y is set to true then we insert a colored pixel
           bytes.push_back(0x00);               // blue
-          bytes.push_back(flip ? 0xff : 0x00); // green
+          bytes.push_back(0x00);               // green
           bytes.push_back(0x00);               // red
           bytes.push_back(0xff);               // alpha
-          if (!shade_waveform) {
-            flip ^= true;
-          }
         } else { // Draw default white pixel (0xff 0xff 0xff 0xff)
           bytes.push_back(0xff); // blue
           bytes.push_back(0xff); // green
@@ -1331,7 +1343,7 @@ public:
 #endif
 
 private:
-  static constexpr uint32_t PSF_FONT_MAGIC{0x72b54a86}; // Used to validate font header's magic number
+  static constexpr uint32_t PSF_FONT_MAGIC{std::byteswap(0x72b54a86)}; // Used to validate font header's magic number
   // Used for saving wave forms as bitmaps -- used internally
   // Source: https://en.wikipedia.org/wiki/BMP_file_format
   struct bitmap_header_t {
@@ -1409,17 +1421,33 @@ private:
     memcpy(&header, reinterpret_cast<psf_header_t*>(temp_buffer), sizeof(psf_header_t));
 
 #ifdef DEBUG
-
+    std::cout << "bytes_read=" << bytes_read << std::endl;
+    std::cout << std::hex << "magic=0x" << header.magic << std::dec << std::endl;
     std::cout << "glyph_size=" << header.glyph_size << std::endl;
     std::cout << "bytes_per_glyph=" << header.bytes_per_glyph << std::endl;
     std::cout << "glyph_height=" << header.glyph_height << std::endl;
-    std::cout << "glyph_width=" << header.glyph_width << "\033[0m" << std::endl;
+    std::cout << "glyph_width=" << header.glyph_width << std::endl;
+    std::cout << "has_unicode_table=" << std::boolalpha << (header.has_unicode_table == 0x1) << std::noboolalpha << std::endl;
+    std::cout << "header_size=" << header.this_header_size << " sizeof(psf_header_t)=" << sizeof(psf_header_t)  << std::endl;
 #endif
 
+    if (header.magic != PSF_FONT_MAGIC) {
+#ifdef DEBUG
+        std::cout << "Invalid magic for PC screen font version 2.0 we only support version 2.0 sorry :(" << std::endl;
+#endif
+        delete[] temp_buffer;
+        return false;
+    }
+
     //Starting after the header so we can load those glyphs into a vector (much more friendler)
-    for(size_t index = sizeof(psf_header_t); index < bytes_read; index++) {
+    for(size_t index = header.this_header_size; index < bytes_read; index++) {
         glyphs_raw_data.push_back(temp_buffer[index]);
     }
+
+#ifdef DEBUG
+        std::cout << "glyphs_raw_data.size()=" << glyphs_raw_data.size() << "\033[0m"  << std::endl;
+#endif
+
     
     fclose(psf_file_handle);
     
