@@ -1071,6 +1071,7 @@ public:
             : (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
                static_cast<size_t>(m_header.sample_rate));
     const size_t height{128};
+    const size_t max_font_height{16};
 
     std::future<std::vector<std::vector<bool>>> bitmap_future =
         std::async(std::launch::async, [&]() {
@@ -1090,7 +1091,7 @@ public:
                                   (static_cast<double>(column) /
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
-                static_cast<double>(height) *
+                static_cast<double>(height-max_font_height) *
                 ((index_as_double(column).value_or(0.0) + 1.0) / 2.0));
             if (row >= height) {
               continue;
@@ -1128,6 +1129,7 @@ public:
             std::vector<uint8_t> glyphs_raw_buffer;
             const size_t wrap_count{50}; // Draws to next line after 50 glpyhs rendered on the same bitmap line
             size_t glyph_count{0};
+            const size_t padding_px{1};
             if (load_psf2_font(pc_screenfont_file_path, font_header, glyphs_raw_buffer)) {
                 if (nullptr != text && !glyphs_raw_buffer.empty()) {
                     size_t row_offset{0}; // y
@@ -1151,9 +1153,9 @@ public:
 
                         for(size_t row = 0; row < font_header.glyph_height; row++) {
                             auto& bits{rows_as_bits[row]};
-                            for (size_t column = 0; column < bits.size(); column++) {
-                                if (bits[column]) {
-                                    const size_t true_row{(height - 4) - row+row_offset};
+                            for (int64_t column = 0; column < bits.size(); column++) {
+                                if (bits[(bits.size() - 1) - column]) { // We want to iterate through the bits in the reverse order as the bitmap glyph is mirrored
+                                    const size_t true_row{(height - padding_px) - row+row_offset};
                                     const size_t true_column{column+column_offset};
                                     bitmap[true_row][true_column] = true;
                                 }
