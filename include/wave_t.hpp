@@ -30,6 +30,7 @@
 #define WAVE_T_HPP
 
 #include <bit>
+#include <bitset>
 #include <cfenv>
 #include <climits>
 #include <cmath>
@@ -1051,23 +1052,26 @@ public:
   // scale of the wavefile one sample is one pixel so its expensive but fun :)
   // Third parameter if set to true (false is default) then draws the waveform
   // shaded else it plots it without shading underneath the waveform
+  // Fourth parameter directs a pc screen font file path to also render the text (fifth) if empty string then displa_filename is treated as if it were false
   bool save_waveform_as_monochrome_bmp(const std::string &file_path,
                                        bool scale_down = true,
-                                       bool shade_waveform = false) {
+                                       bool shade_waveform = false, bool display_filename = false, 
+                                       const char* pc_screenfont_file_path = nullptr, const char* text = nullptr) {
     if (file_path.empty()) {
       return false;
     }
-
     if (m_samples.empty()) {
       return false;
     }
-    constexpr const size_t default_width = 2048;
+
+    constexpr const size_t default_width{2048};
     const size_t width =
         scale_down
             ? default_width
             : (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
                static_cast<size_t>(m_header.sample_rate));
     const size_t height{128};
+    const size_t max_font_height{16};
 
     std::future<std::vector<std::vector<bool>>> bitmap_future =
         std::async(std::launch::async, [&]() {
@@ -1087,21 +1091,21 @@ public:
                                   (static_cast<double>(column) /
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
-                static_cast<double>(height) *
+                static_cast<double>(height-max_font_height) *
                 ((index_as_double(column).value_or(0.0) + 1.0) / 2.0));
             if (row >= height) {
               continue;
             }
 
             if (!shade_waveform) {
-              // Plot the main pixel and surrounding pixels to make it thicker
+              //Plot the main pixel and surrounding pixels to make it thicker
               if (row > 0) {
                 bitmap[row - 1][true_column] = true;
               }
               if (row > 0 && true_column > 0) {
                 bitmap[row - 1][true_column - 1] = true;
               }
-              bitmap[row][true_column] = true;
+             bitmap[row][true_column] = true;
               if ((row + 1) < height) {
                 bitmap[row + 1][true_column] = true;
               }
@@ -1119,6 +1123,56 @@ public:
               }
             }
           }
+
+          if (display_filename) {
+            psf_header_t font_header{};
+            std::vector<uint8_t> glyphs_raw_buffer;
+            const size_t wrap_count{50}; // Draws to next line after 50 glpyhs rendered on the same bitmap line
+            size_t glyph_count{0};
+            const size_t padding_px{1};
+            if (load_psf2_font(pc_screenfont_file_path, font_header, glyphs_raw_buffer)) {
+                if (nullptr != text && !glyphs_raw_buffer.empty()) {
+                    size_t row_offset{0}; // y
+                    size_t column_offset{4}; // x
+                    for(size_t index = 0; index < strlen(text); index++) {
+
+                        const size_t char_index{static_cast<size_t>(text[index])};
+                        
+                        if (char_index >= font_header.glyph_size) {
+                            continue;
+                        }
+
+                        const size_t glyph_index{char_index * font_header.bytes_per_glyph};
+                        
+                        std::vector<std::bitset<8>> rows_as_bits;
+                        rows_as_bits.reserve(font_header.glyph_height); 
+
+                        for (size_t row = glyph_index; row < (glyph_index + (font_header.bytes_per_glyph)); row++) {
+                            rows_as_bits.emplace_back(glyphs_raw_buffer[row]);
+                        }
+
+                        for(size_t row = 0; row < font_header.glyph_height; row++) {
+                            auto& bits{rows_as_bits[row]};
+                            for (int64_t column = 0; column < bits.size(); column++) {
+                                if (bits[(bits.size() - 1) - column]) { // We want to iterate through the bits in the reverse order as the bitmap glyph is mirrored
+                                    const size_t true_row{(height - padding_px) - row+row_offset};
+                                    const size_t true_column{column+column_offset};
+                                    bitmap[true_row][true_column] = true;
+                                }
+                            }
+                        }
+
+                        if (wrap_count == glyph_count) {
+                          row_offset += (font_header.glyph_height + 1);
+                        }
+
+                        column_offset += (font_header.glyph_width); 
+                        glyph_count %= wrap_count;                       
+                    }
+                }
+            }
+          }
+
           return bitmap;
         });
 
@@ -1159,19 +1213,13 @@ public:
 
     auto bitmap = bitmap_future.get();
 
-    bool flip{false}; // Used to alternate color pixel
-
     for (auto &row : bitmap) {
       for (bool column : row) {
-        if (column) { // If this x y is set to true then we insert a black pixel
-                      // (0x00 0x00 0x00 0xFF)
+        if (column) { // If this x y is set to true then we insert a colored pixel
           bytes.push_back(0x00);               // blue
-          bytes.push_back(flip ? 0xff : 0x00); // green
+          bytes.push_back(0x00);               // green
           bytes.push_back(0x00);               // red
           bytes.push_back(0xff);               // alpha
-          if (!shade_waveform) {
-            flip ^= true;
-          }
         } else { // Draw default white pixel (0xff 0xff 0xff 0xff)
           bytes.push_back(0xff); // blue
           bytes.push_back(0xff); // green
@@ -1297,7 +1345,8 @@ public:
 #endif
 
 private:
-  // Used for saving wave forms as bitmaps
+  static constexpr uint32_t PSF_FONT_MAGIC{std::byteswap(0x72b54a86)}; // Used to validate font header's magic number
+  // Used for saving wave forms as bitmaps -- used internally
   // Source: https://en.wikipedia.org/wiki/BMP_file_format
   struct bitmap_header_t {
     char magic_field[2];
@@ -1316,14 +1365,98 @@ private:
     uint32_t color_pallete_count;
     uint32_t important_colors_used;
   } __attribute__((packed));
-  ;
+  
+  //Source: https://en.wikipedia.org/wiki/PC_Screen_Font
+  // Used to render text when rendering waveform -- used internally 
+  struct psf_header_t {
+        uint32_t magic;
+        uint32_t version;
+        uint32_t this_header_size; // Note: Will be always set to sizeof(psf_header_t) 
+        uint32_t has_unicode_table;
+        uint32_t glyph_size; // 
+        uint32_t bytes_per_glyph;
+        uint32_t glyph_height;
+        uint32_t glyph_width;
+
+  }; // We don't need to pack hurray or could we?
 
   // Used for saving 24-bit audio -- custom type
   struct int24_t {
     int8_t byte1;
     int8_t byte2;
     int8_t byte3;
-  };
+  }; // Same as here -- do we oack here?
+
+  //Internal helper function -- second and third parameter are out parameter please check return value before checking those out values
+  static bool load_psf2_font(const char* file_path, psf_header_t& header, std::vector<uint8_t>& glyphs_raw_data) {
+
+    if (nullptr == file_path) {
+#ifdef DEBUG
+      std::cout << "Passed null file path!!" << std::endl;
+#endif
+        return false;
+    }
+    
+    auto psf_file_handle = fopen(file_path, "rb");
+    
+    if (nullptr == psf_file_handle) {
+#ifdef DEBUG
+      std::cout << "Failed to open PC screen font!!" << std::endl;
+#endif
+      return false;
+    }
+
+#ifdef DEBUG
+    std::cout << "\033[01;34mLoaded PC screen font at " << file_path << std::endl;
+#endif
+    
+    constexpr const size_t max_file_size{65536};
+    
+    glyphs_raw_data.reserve(max_file_size);
+    
+    uint8_t* temp_buffer = new uint8_t[max_file_size]; // Don't think pc screen fonts go behind 2K
+    memset(temp_buffer, '\0', sizeof(temp_buffer));
+
+    size_t bytes_read =
+          fread(temp_buffer, sizeof(uint8_t), max_file_size, psf_file_handle);
+
+    memcpy(&header, reinterpret_cast<psf_header_t*>(temp_buffer), sizeof(psf_header_t));
+
+#ifdef DEBUG
+    std::cout << "bytes_read=" << bytes_read << std::endl;
+    std::cout << std::hex << "magic=0x" << header.magic << std::dec << std::endl;
+    std::cout << "glyph_size=" << header.glyph_size << std::endl;
+    std::cout << "bytes_per_glyph=" << header.bytes_per_glyph << std::endl;
+    std::cout << "glyph_height=" << header.glyph_height << std::endl;
+    std::cout << "glyph_width=" << header.glyph_width << std::endl;
+    std::cout << "has_unicode_table=" << std::boolalpha << (header.has_unicode_table == 0x1) << std::noboolalpha << std::endl;
+    std::cout << "header_size=" << header.this_header_size << " sizeof(psf_header_t)=" << sizeof(psf_header_t)  << std::endl;
+#endif
+
+    if (header.magic != PSF_FONT_MAGIC) {
+#ifdef DEBUG
+        std::cout << "Invalid magic for PC screen font version 2.0 we only support version 2.0 sorry :(" << std::endl;
+#endif
+        delete[] temp_buffer;
+        return false;
+    }
+
+    //Starting after the header so we can load those glyphs into a vector (much more friendler)
+    for(size_t index = header.this_header_size; index < bytes_read; index++) {
+        glyphs_raw_data.push_back(temp_buffer[index]);
+    }
+
+#ifdef DEBUG
+        std::cout << "glyphs_raw_data.size()=" << glyphs_raw_data.size() << "\033[0m"  << std::endl;
+#endif
+
+    
+    fclose(psf_file_handle);
+    
+    delete[] temp_buffer;
+
+    return bytes_read > 0;
+  }
 
   static constexpr int24_t make_int24_t(const int32_t &value) {
     int24_t _24_bit_value{};
