@@ -61,8 +61,11 @@ double detune(double x) {
  */
 
 int main(int arguments_size, char **arguments) {
-
+#ifndef ARM_MAC
   std::cout << "wave_t.hpp usage example!" << std::endl;
+#else
+  std::cout << "wave_t.hpp usage example! Running on silicon manzana" << std::endl;
+#endif
   wave_file_t output;
   const size_t sample_rate = 44100;
   output.set_sample_rate(sample_rate);
