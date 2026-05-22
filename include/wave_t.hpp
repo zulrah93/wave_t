@@ -53,6 +53,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <flat_map>
 
 using namespace std::literals::complex_literals;
 
@@ -333,6 +334,26 @@ struct wave_header_t {
   uint32_t sub_chunk_2_id;
   uint32_t sub_chunk_2_size;
 };
+
+enum sequencer_resolution_t : uint8_t {
+      whole_notes = 0,
+      quarter_notes = 1,
+      eigth_notes = 2,
+      sixteenth_notes = 3,
+      thirty_secondth_notes = 4
+};
+
+struct sequencer_metadata_t {
+    size_t sequencer_length;
+    sequencer_resolution_t selected_resolution; 
+};
+
+namespace sequencer_helper {
+    bool beat_index_to_sample_index(const size_t& beat_index, size_t& sample_index, const sequencer_resolution_t& resolution) {
+        return false;
+    }
+
+}; // sequencer_helper
 
 class wave_file_t {
 public:
@@ -651,6 +672,10 @@ public:
       va_end(args);
     }
     return true;
+  }
+
+  bool generate_from_drum_machine_sequencer(const sequencer_metadata_t& sequencer_metadata, const std::flat_map<bool, std::string>& sequence) {
+    return false;
   }
 
   bool generate_synth(const size_t sample_size, const double volume_percent,
