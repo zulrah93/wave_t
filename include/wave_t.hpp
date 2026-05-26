@@ -71,6 +71,7 @@ constexpr auto INT24_MAX{8388607};
 constexpr auto BITS_PER_BYTE{8};
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE{16};
 constexpr auto DEFAULT_RESERVE_VALUE{44100 * 60 * 5};
+constexpr size_t BEATS_PER_BAR{4};
 constexpr auto MAX_OSC_SUPPORT{7}; // Change this if we are going to support
                                    // more or less (but hopefully more)
 
@@ -349,10 +350,34 @@ struct sequencer_metadata_t {
 };
 
 namespace sequencer_helper {
-    bool beat_index_to_sample_index(const size_t& beat_index, size_t& sample_index, const sequencer_resolution_t& resolution) {
-        return false;
+    constexpr size_t samples_per_beat(const uint32_t& sample_rate, const uint16_t& bpm) {
+        return (60 * sample_rate) / bpm;
     }
-
+    constexpr size_t samples_per_bar(const uint32_t& sample_rate, const uint16_t& bpm) {
+        return samples_per_beat(sample_rate, bpm) * BEATS_PER_BAR;
+    }
+    constexpr size_t samples_per_eighth(const uint32_t& sample_rate, const uint16_t& bpm) {
+        return samples_per_beat(sample_rate, bpm) / 8;
+    }
+    constexpr size_t samples_per_sixteenth(const uint32_t& sample_rate, const uint16_t& bpm) {
+        return samples_per_beat(sample_rate, bpm) / 16;
+    }
+    constexpr size_t samples_per_thirty_secondth(const uint32_t& sample_rate, const uint16_t& bpm) {
+        return samples_per_beat(sample_rate, bpm) / 32;
+    }
+    constexpr bool beat_index_to_sample_index(const size_t& beat_index, size_t& sample_index, const uint32_t sample_rate, 
+                                      const uint16_t& bpm, const sequencer_resolution_t& resolution) {
+        switch (resolution) {
+          case sequencer_resolution_t::quarter_notes: {
+            sample_index = samples_per_eighth(sample_rate, bpm) * beat_index;
+            break;
+          }
+          default: {
+            return false;
+          }
+        }
+        return true;
+    }
 }; // sequencer_helper
 
 class wave_file_t {
@@ -1656,6 +1681,11 @@ private:
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
       }
     });
+  }
+
+  //Debating if this should be a public interface :)
+  bool insert_sample_wav_at(const std::string& wav_file_path, size_t index) {
+    return false;
   }
 
   wave_header_t m_header;
