@@ -368,8 +368,20 @@ namespace sequencer_helper {
     constexpr bool beat_index_to_sample_index(const size_t& beat_index, size_t& sample_index, const uint32_t sample_rate, 
                                       const uint16_t& bpm, const sequencer_resolution_t& resolution) {
         switch (resolution) {
+          case sequencer_resolution_t::whole_notes: {
+            sample_index = samples_per_bar(sample_rate, bpm) * beat_index;
+            break;
+          }
           case sequencer_resolution_t::quarter_notes: {
             sample_index = samples_per_eighth(sample_rate, bpm) * beat_index;
+            break;
+          }
+          case sequencer_resolution_t::sixteenth_notes: {
+            sample_index = samples_per_sixteenth(sample_rate, bpm) * beat_index;
+            break;
+          }
+          case sequencer_resolution_t::thirty_secondth_notes: {
+            sample_index = samples_per_thirty_secondth(sample_rate, bpm) * beat_index;
             break;
           }
           default: {
@@ -1684,7 +1696,9 @@ private:
   }
 
   //Debating if this should be a public interface :)
-  bool insert_sample_wav_at(const std::string& wav_file_path, size_t index) {
+  bool insert_wav_sample_at(const std::string& wav_file_path, size_t index) {
+    wave_file_t wav_file(wav_file_path);
+    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(), wav_file.m_samples.end());
     return false;
   }
 
