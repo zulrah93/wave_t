@@ -356,13 +356,13 @@ namespace sequencer_helper {
         return samples_per_beat(sample_rate, bpm) * BEATS_PER_BAR;
     }
     constexpr size_t samples_per_eighth(const uint32_t& sample_rate, const uint16_t& bpm) {
-        return samples_per_beat(sample_rate, bpm) / 8;
+        return samples_per_bar(sample_rate, bpm) / 8;
     }
     constexpr size_t samples_per_sixteenth(const uint32_t& sample_rate, const uint16_t& bpm) {
-        return samples_per_beat(sample_rate, bpm) / 16;
+        return samples_per_bar(sample_rate, bpm) / 16;
     }
     constexpr size_t samples_per_thirty_secondth(const uint32_t& sample_rate, const uint16_t& bpm) {
-        return samples_per_beat(sample_rate, bpm) / 32;
+        return samples_per_bar(sample_rate, bpm) / 32;
     }
     constexpr bool beat_index_to_sample_index(const size_t& beat_index, size_t& sample_index, const uint32_t sample_rate, 
                                       const uint16_t& bpm, const sequencer_resolution_t& resolution) {
@@ -716,6 +716,7 @@ public:
     for (size_t beat_index = 0; beat_index < sequence_steps.size(); beat_index++) {
       const std::string& sequence_step_sample_path = sequence_steps[beat_index];
       if (sequence_step_sample_path.empty()) {
+        insert_rest_at(sequencer_metadata);
         continue;
       }
       size_t sample_index{0};
@@ -1719,6 +1720,12 @@ private:
     }
     m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(), wav_file.m_samples.end());
     return true;
+  }
+
+  void insert_rest_at(const sequencer_metadata_t& sequencer_metadata) {
+      for(size_t _ = 0; _ < sequencer_helper::samples_per_beat(m_header.sample_rate, sequencer_metadata.bpm); _++) {
+          m_samples.push_back(0);
+      }
   }
 
   wave_header_t m_header;
