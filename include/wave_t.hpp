@@ -53,7 +53,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <flat_map>
 
 using namespace std::literals::complex_literals;
 
@@ -346,11 +345,12 @@ enum sequencer_resolution_t : uint8_t {
 
 struct sequencer_metadata_t {
     size_t sequencer_length;
+    uint16_t bpm;
     sequencer_resolution_t selected_resolution; 
 };
 
 namespace sequencer_helper {
-    constexpr size_t samples_per_beat(const uint32_t& sample_rate, const uint16_t& bpm) {
+    constexpr size_t samples_per_beat(const uint32_t& sample_rate, const uint16_t& bpm) { // Assumes quarter time so beat here means quarter note or 1/4th of a bar etc.
         return (60 * sample_rate) / bpm;
     }
     constexpr size_t samples_per_bar(const uint32_t& sample_rate, const uint16_t& bpm) {
@@ -711,8 +711,27 @@ public:
     return true;
   }
 
-  bool generate_from_drum_machine_sequencer(const sequencer_metadata_t& sequencer_metadata, const std::flat_map<bool, std::string>& sequence) {
-    return false;
+  // The parameter sequence_steps is a vector of strings where if the element is an empty string no sample is added else the sample is added with a specific path
+  bool generate_from_drum_machine_sequencer(const sequencer_metadata_t& sequencer_metadata, const std::vector<std::string>& sequence_steps) {
+    switch(sequencer_metadata.selected_resolution) {
+        case sequencer_resolution_t::quarter_notes: {
+            for (size_t beat_index = 0; beat_index < sequence_steps.size(); beat_index++) {
+              const std::string& sequence_step_sample_path = sequence_steps[beat_index];
+              if (sequence_step_sample_path.empty()) {
+                continue;
+              }
+              size_t sample_index{0};
+              if (sequencer_helper::beat_index_to_sample_index(beat_index, sample_index, 
+                                                m_header.sample_rate, sequencer_metadata.bpm, sequencer_metadata.selected_resolution)) {
+                insert_wav_sample_at(sequence_step_sample_path, sample_index);
+              }
+            }
+        };
+        default: {
+          return false;
+        };
+    }
+    return true;
   }
 
   bool generate_synth(const size_t sample_size, const double volume_percent,
