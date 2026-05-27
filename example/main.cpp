@@ -275,7 +275,7 @@ int main(int arguments_size, char **arguments) {
   sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
   if (kicks.generate_from_drum_machine_sequencer(sequencer_data, { sample_kick_path, "", sample_kick_path, "", 
                                                                 sample_kick_path, "", sample_kick_path,  "", 
-                                                                       sample_kick_path, "", sample_kick_path, ""  })) {
+                                                                       sample_kick_path, "", sample_kick_path})) {
 
     kicks.save("6kicks.wav"); 
   }
