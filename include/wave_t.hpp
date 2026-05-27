@@ -344,7 +344,6 @@ enum sequencer_resolution_t : uint8_t {
 };
 
 struct sequencer_metadata_t {
-    size_t sequencer_length;
     uint16_t bpm;
     sequencer_resolution_t selected_resolution; 
 };
@@ -1715,8 +1714,11 @@ private:
   //Debating if this should be a public interface :)
   bool insert_wav_sample_at(const std::string& wav_file_path, size_t index) {
     wave_file_t wav_file(wav_file_path);
+    if (!wav_file) {
+      return false;
+    }
     m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(), wav_file.m_samples.end());
-    return false;
+    return true;
   }
 
   wave_header_t m_header;

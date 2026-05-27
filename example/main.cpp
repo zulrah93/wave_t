@@ -263,6 +263,25 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 
+  std::cout << "Generating 6 quarter note kick drum samples at 180 BPM" << std::endl;
+
+  const char* sample_kick_path = "../samples/PunchyKick.wav";
+  wave_file_t kicks;
+  kicks.set_sample_rate(sample_rate);
+  kicks.set_number_of_channels(1);
+  kicks.set_bits_per_sample(16);
+  sequencer_metadata_t sequencer_data{};
+  sequencer_data.bpm = 180;
+  sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
+  if (kicks.generate_from_drum_machine_sequencer(sequencer_data, { sample_kick_path, "", sample_kick_path, "", 
+                                                                sample_kick_path, "", sample_kick_path,  "", 
+                                                                       sample_kick_path, "", sample_kick_path, ""  })) {
+
+    kicks.save("6kicks.wav"); 
+  }
+  else {
+     std::cout << "Drum machine demo broke :(" << std::endl;
+  }
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
