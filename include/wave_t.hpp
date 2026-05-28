@@ -2,7 +2,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2025 Daniel Lopez
+// Copyright (c) 2025-2026 Daniel Lopez
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,6 @@
 #include <format>
 #include <functional>
 #include <future>
-#include <thread>
 #include <ios>
 #include <latch>
 #include <limits>
@@ -51,6 +50,7 @@
 #include <sstream>
 #include <stdarg.h>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -70,6 +70,7 @@ constexpr auto INT24_MAX{8388607};
 constexpr auto BITS_PER_BYTE{8};
 constexpr auto DEFAULT_SUB_CHUNK_1_SIZE{16};
 constexpr auto DEFAULT_RESERVE_VALUE{44100 * 60 * 5};
+constexpr size_t BEATS_PER_BAR{4};
 constexpr auto MAX_OSC_SUPPORT{7}; // Change this if we are going to support
                                    // more or less (but hopefully more)
 
@@ -314,7 +315,8 @@ std::vector<int32_t> oscillator_processing_callback(
     const oscillator_selection_t &osc_to_process, const size_t &sample_size,
     const double &volume, const bool &is_stereo, const uint32_t &sample_rate,
     synth_config_t &configuration,
-    std::initializer_list<oscillator_config_t *> selected_oscs); // See implementation below
+    std::initializer_list<oscillator_config_t *>
+        selected_oscs); // See implementation below
 
 } // namespace processing_functions
 
@@ -333,6 +335,71 @@ struct wave_header_t {
   uint32_t sub_chunk_2_id;
   uint32_t sub_chunk_2_size;
 };
+
+enum sequencer_resolution_t : uint8_t {
+  whole_notes = 0,
+  quarter_notes = 1,
+  eigth_notes = 2,
+  sixteenth_notes = 3,
+  thirty_secondth_notes = 4
+};
+
+struct sequencer_metadata_t {
+  uint16_t bpm;
+  sequencer_resolution_t selected_resolution;
+};
+
+namespace sequencer_helper {
+constexpr size_t samples_per_beat(
+    const uint32_t &sample_rate,
+    const uint16_t &bpm) { // Assumes quarter time so beat here means quarter
+                           // note or 1/4th of a bar etc.
+  return (60 * sample_rate) / bpm;
+}
+constexpr size_t samples_per_bar(const uint32_t &sample_rate,
+                                 const uint16_t &bpm) {
+  return samples_per_beat(sample_rate, bpm) * BEATS_PER_BAR;
+}
+constexpr size_t samples_per_eighth(const uint32_t &sample_rate,
+                                    const uint16_t &bpm) {
+  return samples_per_bar(sample_rate, bpm) / 8;
+}
+constexpr size_t samples_per_sixteenth(const uint32_t &sample_rate,
+                                       const uint16_t &bpm) {
+  return samples_per_bar(sample_rate, bpm) / 16;
+}
+constexpr size_t samples_per_thirty_secondth(const uint32_t &sample_rate,
+                                             const uint16_t &bpm) {
+  return samples_per_bar(sample_rate, bpm) / 32;
+}
+constexpr bool
+beat_index_to_sample_index(const size_t &beat_index, size_t &sample_index,
+                           const uint32_t sample_rate, const uint16_t &bpm,
+                           const sequencer_resolution_t &resolution) {
+  switch (resolution) {
+  case sequencer_resolution_t::whole_notes: {
+    sample_index = samples_per_bar(sample_rate, bpm) * beat_index;
+    break;
+  }
+  case sequencer_resolution_t::quarter_notes: {
+    sample_index = samples_per_eighth(sample_rate, bpm) * beat_index;
+    break;
+  }
+  case sequencer_resolution_t::sixteenth_notes: {
+    sample_index = samples_per_sixteenth(sample_rate, bpm) * beat_index;
+    break;
+  }
+  case sequencer_resolution_t::thirty_secondth_notes: {
+    sample_index = samples_per_thirty_secondth(sample_rate, bpm) * beat_index;
+    break;
+  }
+  default: {
+    return false;
+  }
+  }
+  return true;
+}
+}; // namespace sequencer_helper
 
 class wave_file_t {
 public:
@@ -653,6 +720,34 @@ public:
     return true;
   }
 
+  // The parameter sequence_steps is a vector of strings where if the element is
+  // an empty string no sample is added else the sample is added with a specific
+  // path
+  bool generate_from_drum_machine_sequencer(
+      const sequencer_metadata_t &sequencer_metadata,
+      const std::vector<std::string> &sequence_steps) {
+
+    for (size_t beat_index = 0; beat_index < sequence_steps.size();
+         beat_index++) {
+      const std::string &sequence_step_sample_path = sequence_steps[beat_index];
+      if (sequence_step_sample_path.empty()) {
+        insert_rest_at(sequencer_metadata);
+        continue;
+      }
+      size_t sample_index{0};
+      if (sequencer_helper::beat_index_to_sample_index(
+              beat_index, sample_index, m_header.sample_rate,
+              sequencer_metadata.bpm, sequencer_metadata.selected_resolution)) {
+        insert_wav_sample_at(sequence_step_sample_path, sample_index);
+      } else {
+        return false; // Invalid sample path should cause a return false to let
+                      // caller know they messed up on their end
+      }
+    }
+
+    return true;
+  }
+
   bool generate_synth(const size_t sample_size, const double volume_percent,
                       synth_config_t &configuration) {
 
@@ -712,42 +807,42 @@ public:
                    oscillator_selection_t::oscillator_a, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_a);
-    
+
     auto osc_b_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
                    oscillator_selection_t::oscillator_b, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_b);
-    
+
     auto osc_c_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
-                  oscillator_selection_t::oscillator_c, std::ref(sample_size),
+                   oscillator_selection_t::oscillator_c, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_c);
-    
+
     auto osc_d_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
                    oscillator_selection_t::oscillator_d, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_d);
-    
+
     auto osc_e_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
                    oscillator_selection_t::oscillator_e, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_e);
-    
+
     auto osc_f_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
                    oscillator_selection_t::oscillator_f, std::ref(sample_size),
                    std::ref(volume), std::ref(is_stereo), std::ref(sample_rate),
                    std::ref(configuration), selected_oscs_f);
-    
+
     auto osc_g_carrier_future =
         std::async(std::launch::async,
                    &processing_functions::oscillator_processing_callback,
@@ -1052,11 +1147,13 @@ public:
   // scale of the wavefile one sample is one pixel so its expensive but fun :)
   // Third parameter if set to true (false is default) then draws the waveform
   // shaded else it plots it without shading underneath the waveform
-  // Fourth parameter directs a pc screen font file path to also render the text (fifth) if empty string then displa_filename is treated as if it were false
-  bool save_waveform_as_monochrome_bmp(const std::string &file_path,
-                                       bool scale_down = true,
-                                       bool shade_waveform = false, bool display_filename = false, 
-                                       const char* pc_screenfont_file_path = nullptr, const char* text = nullptr) {
+  // Fourth parameter directs a pc screen font file path to also render the text
+  // (fifth) if empty string then displa_filename is treated as if it were false
+  bool save_waveform_as_monochrome_bmp(
+      const std::string &file_path, bool scale_down = true,
+      bool shade_waveform = false, bool display_filename = false,
+      const char *pc_screenfont_file_path = nullptr,
+      const char *text = nullptr) {
     if (file_path.empty()) {
       return false;
     }
@@ -1091,21 +1188,21 @@ public:
                                   (static_cast<double>(column) /
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
-                static_cast<double>(height-max_font_height) *
+                static_cast<double>(height - max_font_height) *
                 ((index_as_double(column).value_or(0.0) + 1.0) / 2.0));
             if (row >= height) {
               continue;
             }
 
             if (!shade_waveform) {
-              //Plot the main pixel and surrounding pixels to make it thicker
+              // Plot the main pixel and surrounding pixels to make it thicker
               if (row > 0) {
                 bitmap[row - 1][true_column] = true;
               }
               if (row > 0 && true_column > 0) {
                 bitmap[row - 1][true_column - 1] = true;
               }
-             bitmap[row][true_column] = true;
+              bitmap[row][true_column] = true;
               if ((row + 1) < height) {
                 bitmap[row + 1][true_column] = true;
               }
@@ -1127,49 +1224,58 @@ public:
           if (display_filename) {
             psf_header_t font_header{};
             std::vector<uint8_t> glyphs_raw_buffer;
-            const size_t wrap_count{50}; // Draws to next line after 50 glpyhs rendered on the same bitmap line
+            const size_t wrap_count{50}; // Draws to next line after 50 glpyhs
+                                         // rendered on the same bitmap line
             size_t glyph_count{0};
             const size_t padding_px{1};
-            if (load_psf2_font(pc_screenfont_file_path, font_header, glyphs_raw_buffer)) {
-                if (nullptr != text && !glyphs_raw_buffer.empty()) {
-                    size_t row_offset{0}; // y
-                    size_t column_offset{4}; // x
-                    for(size_t index = 0; index < strlen(text); index++) {
+            if (load_psf2_font(pc_screenfont_file_path, font_header,
+                               glyphs_raw_buffer)) {
+              if (nullptr != text && !glyphs_raw_buffer.empty()) {
+                size_t row_offset{0};    // y
+                size_t column_offset{4}; // x
+                for (size_t index = 0; index < strlen(text); index++) {
 
-                        const size_t char_index{static_cast<size_t>(text[index])};
-                        
-                        if (char_index >= font_header.glyph_size) {
-                            continue;
-                        }
+                  const size_t char_index{static_cast<size_t>(text[index])};
 
-                        const size_t glyph_index{char_index * font_header.bytes_per_glyph};
-                        
-                        std::vector<std::bitset<8>> rows_as_bits;
-                        rows_as_bits.reserve(font_header.glyph_height); 
+                  if (char_index >= font_header.glyph_size) {
+                    continue;
+                  }
 
-                        for (size_t row = glyph_index; row < (glyph_index + (font_header.bytes_per_glyph)); row++) {
-                            rows_as_bits.emplace_back(glyphs_raw_buffer[row]);
-                        }
+                  const size_t glyph_index{char_index *
+                                           font_header.bytes_per_glyph};
 
-                        for(size_t row = 0; row < font_header.glyph_height; row++) {
-                            auto& bits{rows_as_bits[row]};
-                            for (int64_t column = 0; column < bits.size(); column++) {
-                                if (bits[(bits.size() - 1) - column]) { // We want to iterate through the bits in the reverse order as the bitmap glyph is mirrored
-                                    const size_t true_row{(height - padding_px) - row+row_offset};
-                                    const size_t true_column{column+column_offset};
-                                    bitmap[true_row][true_column] = true;
-                                }
-                            }
-                        }
+                  std::vector<std::bitset<8>> rows_as_bits;
+                  rows_as_bits.reserve(font_header.glyph_height);
 
-                        if (wrap_count == glyph_count) {
-                          row_offset += (font_header.glyph_height + 1);
-                        }
+                  for (size_t row = glyph_index;
+                       row < (glyph_index + (font_header.bytes_per_glyph));
+                       row++) {
+                    rows_as_bits.emplace_back(glyphs_raw_buffer[row]);
+                  }
 
-                        column_offset += (font_header.glyph_width); 
-                        glyph_count %= wrap_count;                       
+                  for (size_t row = 0; row < font_header.glyph_height; row++) {
+                    auto &bits{rows_as_bits[row]};
+                    for (int64_t column = 0; column < bits.size(); column++) {
+                      if (bits[(bits.size() - 1) -
+                               column]) { // We want to iterate through the bits
+                                          // in the reverse order as the bitmap
+                                          // glyph is mirrored
+                        const size_t true_row{(height - padding_px) - row +
+                                              row_offset};
+                        const size_t true_column{column + column_offset};
+                        bitmap[true_row][true_column] = true;
+                      }
                     }
+                  }
+
+                  if (wrap_count == glyph_count) {
+                    row_offset += (font_header.glyph_height + 1);
+                  }
+
+                  column_offset += (font_header.glyph_width);
+                  glyph_count %= wrap_count;
                 }
+              }
             }
           }
 
@@ -1215,11 +1321,12 @@ public:
 
     for (auto &row : bitmap) {
       for (bool column : row) {
-        if (column) { // If this x y is set to true then we insert a colored pixel
-          bytes.push_back(0x00);               // blue
-          bytes.push_back(0x00);               // green
-          bytes.push_back(0x00);               // red
-          bytes.push_back(0xff);               // alpha
+        if (column) { // If this x y is set to true then we insert a colored
+                      // pixel
+          bytes.push_back(0x00); // blue
+          bytes.push_back(0x00); // green
+          bytes.push_back(0x00); // red
+          bytes.push_back(0xff); // alpha
         } else { // Draw default white pixel (0xff 0xff 0xff 0xff)
           bytes.push_back(0xff); // blue
           bytes.push_back(0xff); // green
@@ -1266,7 +1373,8 @@ public:
 #endif
 
 private:
-  static constexpr uint32_t PSF_FONT_MAGIC{std::byteswap(0x72b54a86)}; // Used to validate font header's magic number
+  static constexpr uint32_t PSF_FONT_MAGIC{
+      std::byteswap(0x72b54a86)}; // Used to validate font header's magic number
   // Used for saving wave forms as bitmaps -- used internally
   // Source: https://en.wikipedia.org/wiki/BMP_file_format
   struct bitmap_header_t {
@@ -1286,18 +1394,19 @@ private:
     uint32_t color_pallete_count;
     uint32_t important_colors_used;
   } __attribute__((packed));
-  
-  //Source: https://en.wikipedia.org/wiki/PC_Screen_Font
-  // Used to render text when rendering waveform -- used internally 
+
+  // Source: https://en.wikipedia.org/wiki/PC_Screen_Font
+  //  Used to render text when rendering waveform -- used internally
   struct psf_header_t {
-        uint32_t magic;
-        uint32_t version;
-        uint32_t this_header_size; // Note: Will be always set to sizeof(psf_header_t) 
-        uint32_t has_unicode_table;
-        uint32_t glyph_size; // 
-        uint32_t bytes_per_glyph;
-        uint32_t glyph_height;
-        uint32_t glyph_width;
+    uint32_t magic;
+    uint32_t version;
+    uint32_t
+        this_header_size; // Note: Will be always set to sizeof(psf_header_t)
+    uint32_t has_unicode_table;
+    uint32_t glyph_size; //
+    uint32_t bytes_per_glyph;
+    uint32_t glyph_height;
+    uint32_t glyph_width;
 
   }; // We don't need to pack hurray or could we?
 
@@ -1308,18 +1417,20 @@ private:
     int8_t byte3;
   }; // Same as here -- do we oack here?
 
-  //Internal helper function -- second and third parameter are out parameter please check return value before checking those out values
-  static bool load_psf2_font(const char* file_path, psf_header_t& header, std::vector<uint8_t>& glyphs_raw_data) {
+  // Internal helper function -- second and third parameter are out parameter
+  // please check return value before checking those out values
+  static bool load_psf2_font(const char *file_path, psf_header_t &header,
+                             std::vector<uint8_t> &glyphs_raw_data) {
 
     if (nullptr == file_path) {
 #ifdef DEBUG
       std::cout << "Passed null file path!!" << std::endl;
 #endif
-        return false;
+      return false;
     }
-    
+
     auto psf_file_handle = fopen(file_path, "rb");
-    
+
     if (nullptr == psf_file_handle) {
 #ifdef DEBUG
       std::cout << "Failed to open PC screen font!!" << std::endl;
@@ -1328,52 +1439,62 @@ private:
     }
 
 #ifdef DEBUG
-    std::cout << "\033[01;34mLoaded PC screen font at " << file_path << std::endl;
+    std::cout << "\033[01;34mLoaded PC screen font at " << file_path
+              << std::endl;
 #endif
-    
+
     constexpr const size_t max_file_size{65536};
-    
+
     glyphs_raw_data.reserve(max_file_size);
-    
-    uint8_t* temp_buffer = new uint8_t[max_file_size]; // Don't think pc screen fonts go behind 2K
+
+    uint8_t *temp_buffer =
+        new uint8_t[max_file_size]; // Don't think pc screen fonts go behind 2K
     memset(temp_buffer, '\0', sizeof(temp_buffer));
 
     size_t bytes_read =
-          fread(temp_buffer, sizeof(uint8_t), max_file_size, psf_file_handle);
+        fread(temp_buffer, sizeof(uint8_t), max_file_size, psf_file_handle);
 
-    memcpy(&header, reinterpret_cast<psf_header_t*>(temp_buffer), sizeof(psf_header_t));
+    memcpy(&header, reinterpret_cast<psf_header_t *>(temp_buffer),
+           sizeof(psf_header_t));
 
 #ifdef DEBUG
     std::cout << "bytes_read=" << bytes_read << std::endl;
-    std::cout << std::hex << "magic=0x" << header.magic << std::dec << std::endl;
+    std::cout << std::hex << "magic=0x" << header.magic << std::dec
+              << std::endl;
     std::cout << "glyph_size=" << header.glyph_size << std::endl;
     std::cout << "bytes_per_glyph=" << header.bytes_per_glyph << std::endl;
     std::cout << "glyph_height=" << header.glyph_height << std::endl;
     std::cout << "glyph_width=" << header.glyph_width << std::endl;
-    std::cout << "has_unicode_table=" << std::boolalpha << (header.has_unicode_table == 0x1) << std::noboolalpha << std::endl;
-    std::cout << "header_size=" << header.this_header_size << " sizeof(psf_header_t)=" << sizeof(psf_header_t)  << std::endl;
+    std::cout << "has_unicode_table=" << std::boolalpha
+              << (header.has_unicode_table == 0x1) << std::noboolalpha
+              << std::endl;
+    std::cout << "header_size=" << header.this_header_size
+              << " sizeof(psf_header_t)=" << sizeof(psf_header_t) << std::endl;
 #endif
 
     if (header.magic != PSF_FONT_MAGIC) {
 #ifdef DEBUG
-        std::cout << "Invalid magic for PC screen font version 2.0 we only support version 2.0 sorry :(" << std::endl;
+      std::cout << "Invalid magic for PC screen font version 2.0 we only "
+                   "support version 2.0 sorry :("
+                << std::endl;
 #endif
-        delete[] temp_buffer;
-        return false;
+      delete[] temp_buffer;
+      return false;
     }
 
-    //Starting after the header so we can load those glyphs into a vector (much more friendler)
-    for(size_t index = header.this_header_size; index < bytes_read; index++) {
-        glyphs_raw_data.push_back(temp_buffer[index]);
+    // Starting after the header so we can load those glyphs into a vector (much
+    // more friendler)
+    for (size_t index = header.this_header_size; index < bytes_read; index++) {
+      glyphs_raw_data.push_back(temp_buffer[index]);
     }
 
 #ifdef DEBUG
-        std::cout << "glyphs_raw_data.size()=" << glyphs_raw_data.size() << "\033[0m"  << std::endl;
+    std::cout << "glyphs_raw_data.size()=" << glyphs_raw_data.size()
+              << "\033[0m" << std::endl;
 #endif
 
-    
     fclose(psf_file_handle);
-    
+
     delete[] temp_buffer;
 
     return bytes_read > 0;
@@ -1590,8 +1711,8 @@ private:
       frequency = 1.0;
     }
 
-    m_lfo_terminate.store(false);
-    m_lfo_future = std::async(std::launch::async, [&]() {
+      m_lfo_terminate.store(false);
+      m_lfo_future = std::async(std::launch::async, [&]() {
       m_start_lfo_latch.wait();
       double time = 0.0;
       constexpr const double volume{1.0};
@@ -1633,6 +1754,25 @@ private:
     });
   }
 
+  // Debating if this should be a public interface :)
+  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index) {
+    wave_file_t wav_file(wav_file_path);
+    if (!wav_file) {
+      return false;
+    }
+    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(),
+                     wav_file.m_samples.end());
+    return true;
+  }
+
+  void insert_rest_at(const sequencer_metadata_t &sequencer_metadata) {
+    for (size_t _ = 0; _ < sequencer_helper::samples_per_beat(
+                               m_header.sample_rate, sequencer_metadata.bpm);
+         _++) {
+      m_samples.push_back(0);
+    }
+  }
+
   wave_header_t m_header;
   std::vector<int64_t> m_samples;
   bool m_apply_bitcrusher_effect{false};
@@ -1655,44 +1795,44 @@ std::vector<int32_t> oscillator_processing_callback(
     std::initializer_list<oscillator_config_t *> selected_oscs) {
 
   std::vector<int32_t> samples;
-  oscillator_config_t* primary_osc{nullptr};
+  oscillator_config_t *primary_osc{nullptr};
 
-  switch(osc_to_process) {
-    case oscillator_selection_t::oscillator_a: {
-      primary_osc = &configuration.oscillator_a;
-      break;
-    }
-    case oscillator_selection_t::oscillator_b: {
-      primary_osc = &configuration.oscillator_b;
-      break;
-    }
-    case oscillator_selection_t::oscillator_c: {
-      primary_osc = &configuration.oscillator_c;
-      break;
-    }
-    case oscillator_selection_t::oscillator_d: {
-      primary_osc = &configuration.oscillator_d;
-      break;
-    }
-    case oscillator_selection_t::oscillator_e: {
-      primary_osc = &configuration.oscillator_e;
-      break;
-    }
-    case oscillator_selection_t::oscillator_f: {
-      primary_osc = &configuration.oscillator_f;
-      break;
-    }
-    case oscillator_selection_t::oscillator_g: {
-      primary_osc = &configuration.oscillator_g;
-      break;
-    }
-    default: {
-      return samples;
-    }
+  switch (osc_to_process) {
+  case oscillator_selection_t::oscillator_a: {
+    primary_osc = &configuration.oscillator_a;
+    break;
+  }
+  case oscillator_selection_t::oscillator_b: {
+    primary_osc = &configuration.oscillator_b;
+    break;
+  }
+  case oscillator_selection_t::oscillator_c: {
+    primary_osc = &configuration.oscillator_c;
+    break;
+  }
+  case oscillator_selection_t::oscillator_d: {
+    primary_osc = &configuration.oscillator_d;
+    break;
+  }
+  case oscillator_selection_t::oscillator_e: {
+    primary_osc = &configuration.oscillator_e;
+    break;
+  }
+  case oscillator_selection_t::oscillator_f: {
+    primary_osc = &configuration.oscillator_f;
+    break;
+  }
+  case oscillator_selection_t::oscillator_g: {
+    primary_osc = &configuration.oscillator_g;
+    break;
+  }
+  default: {
+    return samples;
+  }
   }
 
   if (primary_osc->operator_type != oscillator_type_t::carrier) {
-     return samples;
+    return samples;
   }
 
   samples.reserve(sample_size);
@@ -1762,29 +1902,26 @@ std::vector<int32_t> oscillator_processing_callback(
       }
       }
     }
-    
-    const auto wave_type =
-        static_cast<uint8_t>(primary_osc->wave_type);
+
+    const auto wave_type = static_cast<uint8_t>(primary_osc->wave_type);
 
     if ((wave_type & wave_type_t::sine)) {
-      sample += helper::pcm_sine(
-          primary_osc->frequency + frequency_offset, time,
-          volume + amplitude_offset, phase + phase_offset);
+      sample +=
+          helper::pcm_sine(primary_osc->frequency + frequency_offset, time,
+                           volume + amplitude_offset, phase + phase_offset);
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,
-                                     primary_osc->frequency +
-                                         frequency_offset);
+                                     primary_osc->frequency + frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
       sample += helper::pcm_square(time, volume + amplitude_offset,
-                                   primary_osc->frequency +
-                                       frequency_offset);
+                                   primary_osc->frequency + frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
-      sample += helper::pcm_saw_tooth(time, volume + amplitude_offset,
-                                      primary_osc->frequency +
-                                          frequency_offset);
+      sample +=
+          helper::pcm_saw_tooth(time, volume + amplitude_offset,
+                                primary_osc->frequency + frequency_offset);
     }
 
     // Ring modulation we will multiply the carrier signal with the modulating
