@@ -64,14 +64,16 @@ int main(int arguments_size, char **arguments) {
 #ifndef ARM_MAC
   std::cout << "wave_t.hpp usage example!" << std::endl;
 #else
-  std::cout << "wave_t.hpp usage example! Running on silicon manzana" << std::endl;
+  std::cout << "wave_t.hpp usage example! Running on silicon manzana"
+            << std::endl;
 #endif
   wave_file_t output;
   const size_t sample_rate = 44100;
   output.set_sample_rate(sample_rate);
   output.set_number_of_channels(1);
   output.set_bits_per_sample(16);
-  const size_t sample_size = sample_rate * 60 * 5; // 5 minutes of 16-bit PCM sample
+  const size_t sample_size =
+      sample_rate * 60 * 5; // 5 minutes of 16-bit PCM sample
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
   output.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.6);
@@ -79,12 +81,16 @@ int main(int arguments_size, char **arguments) {
     std::cout << "Failed to save 16-bit generated wav file" << std::endl;
   }
 
-  constexpr const bool scale_down_image{true};  // Default is true for performance 
+  constexpr const bool scale_down_image{
+      true}; // Default is true for performance
   constexpr const bool shade_waveform{false};
   constexpr const bool print_text{true};
-  const char* pc_screenfont_file_path = "../fonts/font.psf";
-  if (!output.save_waveform_as_monochrome_bmp("sine.bmp", scale_down_image, shade_waveform, print_text, pc_screenfont_file_path, "sine.bmp")) {
-        std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
+  const char *pc_screenfont_file_path = "../fonts/font.psf";
+  if (!output.save_waveform_as_monochrome_bmp(
+          "sine.bmp", scale_down_image, shade_waveform, print_text,
+          pc_screenfont_file_path, "sine.bmp")) {
+    std::cout << "Failed to save generated monochrome bitmap of wav file!"
+              << std::endl;
   }
 
   // Try out 24-bit audio!
@@ -154,8 +160,11 @@ int main(int arguments_size, char **arguments) {
             << "(percent error is " << percent_error << " %) \033[0m"
             << std::endl;
 
-  if (input.save_waveform_as_monochrome_bmp("d#5_trumpet.bmp", scale_down_image, shade_waveform, print_text, pc_screenfont_file_path, "d#5_trumpet.bmp")) {
-        std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
+  if (input.save_waveform_as_monochrome_bmp(
+          "d#5_trumpet.bmp", scale_down_image, shade_waveform, print_text,
+          pc_screenfont_file_path, "d#5_trumpet.bmp")) {
+    std::cout << "Failed to save generated monochrome bitmap of wav file!"
+              << std::endl;
   }
 
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
@@ -179,7 +188,7 @@ int main(int arguments_size, char **arguments) {
   synth_config_t configuration{};
 
 #pragma message("Uncomment line below to get alternative synth demo")
-//#define AM_PM_MODULATION_DEMO
+  // #define AM_PM_MODULATION_DEMO
 
 #ifndef AM_PM_MODULATION_DEMO
   // Supersaw example -- hopefully :P
@@ -238,23 +247,26 @@ int main(int arguments_size, char **arguments) {
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
-   configuration.apply_bitcrusher_effect = false;
-   configuration.bitcrusher_wet_percentage = 1.0;
-   configuration.bitcrusher_gain_value = 1.0;
-   configuration.lfo.effect_to_modulate = effects_type_t::bitcrusher_wet_percentage;
-   configuration.lfo.frequency = 20.0;
-   configuration.lfo.wave_type = wave_type_t::linear;
+  configuration.apply_bitcrusher_effect = false;
+  configuration.bitcrusher_wet_percentage = 1.0;
+  configuration.bitcrusher_gain_value = 1.0;
+  configuration.lfo.effect_to_modulate =
+      effects_type_t::bitcrusher_wet_percentage;
+  configuration.lfo.frequency = 20.0;
+  configuration.lfo.wave_type = wave_type_t::linear;
 
   constexpr const double volume{0.13};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
-    
-    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image, shade_waveform, print_text, pc_screenfont_file_path, "synth.bmp")) {
-            std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
-    }
-    else {
-        std::cout << "Checkout the groovy waveform visually!" << std::endl;
+
+    if (!synth_output.save_waveform_as_monochrome_bmp(
+            "synth.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "synth.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
     synth_output.save("synth_output.wav");
   } else {
@@ -263,10 +275,11 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 
-  std::cout << "Generating 6 quarter note kick drum samples at 180 BPM" << std::endl;
+  std::cout << "Generating 6 quarter note kick drum samples at 180 BPM"
+            << std::endl;
 
-  const char* sample_kick_path = "../samples/PunchyKick.wav";
-  const char* sample_snare_path = "../samples/PunchySnareClap.wav";
+  const char *sample_kick_path = "../samples/PunchyKick.wav";
+  const char *sample_snare_path = "../samples/PunchySnareClap.wav";
 
   wave_file_t kicks;
   kicks.set_sample_rate(sample_rate);
@@ -275,21 +288,22 @@ int main(int arguments_size, char **arguments) {
   sequencer_metadata_t sequencer_data{};
   sequencer_data.bpm = 150;
   sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
-  if (kicks.generate_from_drum_machine_sequencer(sequencer_data, { sample_kick_path, "", sample_snare_path, "", 
-                                                                sample_kick_path, "", sample_snare_path,  "", 
-                                                                       sample_kick_path, "", sample_snare_path })) {
+  if (kicks.generate_from_drum_machine_sequencer(
+          sequencer_data,
+          {sample_kick_path, "", sample_snare_path, "", sample_kick_path, "",
+           sample_snare_path, "", sample_kick_path, "", sample_snare_path})) {
 
-    if (kicks.save_waveform_as_monochrome_bmp("drum_snare.bmp", scale_down_image, 
-                            shade_waveform, print_text, pc_screenfont_file_path, "drum_snare.bmp")) {
-            std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
+    if (kicks.save_waveform_as_monochrome_bmp(
+            "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "drum_snare.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
-    else {
-        std::cout << "Checkout the groovy waveform visually!" << std::endl;
-    }
-    kicks.save("6kicks.wav"); 
-  }
-  else {
-     std::cout << "Drum machine demo broke :(" << std::endl;
+    kicks.save("6kicks.wav");
+  } else {
+    std::cout << "Drum machine demo broke :(" << std::endl;
   }
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
@@ -332,14 +346,16 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_e.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
-  configuration.oscillator_f.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_f.operator_type =
+      oscillator_type_t::phase_modulation;
   configuration.oscillator_f.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_f.frequency = E4_FREQUENCY * 4.0;
   configuration.oscillator_f.osc_to_modulate =
       oscillator_selection_t::oscillator_e;
   configuration.oscillator_f.modulation_amplitude = 1.25;
 
-  configuration.oscillator_g.operator_type = oscillator_type_t::phase_modulation;
+  configuration.oscillator_g.operator_type =
+      oscillator_type_t::phase_modulation;
   configuration.oscillator_g.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_g.frequency = E4_FREQUENCY * 2.0;
   configuration.oscillator_g.osc_to_modulate =
@@ -354,7 +370,8 @@ int main(int arguments_size, char **arguments) {
   configuration.apply_bitcrusher_effect = true;
   configuration.bitcrusher_wet_percentage = 1.0;
   configuration.bitcrusher_gain_value = 1.0;
-  configuration.lfo.effect_to_modulate = effects_type_t::bitcrusher_wet_percentage;
+  configuration.lfo.effect_to_modulate =
+      effects_type_t::bitcrusher_wet_percentage;
   configuration.lfo.frequency = E4_FREQUENCY;
   configuration.lfo.wave_type = wave_type_t::sawtooth;
 
@@ -362,12 +379,14 @@ int main(int arguments_size, char **arguments) {
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
-    
-    if (!synth_output.save_waveform_as_monochrome_bmp("synth.bmp", scale_down_image, shade_waveform, print_text, pc_screenfont_file_path, "synth.bmp")) {
-            std::cout << "Failed to save generated monochrome bitmap of wav file!" << std::endl;
-    }
-    else {
-        std::cout << "Checkout the groovy waveform visually!" << std::endl;
+
+    if (!synth_output.save_waveform_as_monochrome_bmp(
+            "synth.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "synth.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
     synth_output.save("synth_output.wav");
   } else {
