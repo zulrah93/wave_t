@@ -140,6 +140,40 @@ Also supports adding samples by converting a frequency domain (a vector of compl
 
 Has support for FM based synthesis using 7 oscillators of the basic wave shapes/types. Support for applying bitcrusher effect. Still this header only library needs more improvent but its mostly working for now except the dft alogrithm. Either way always verify any code you will use in production.
 
+Has a simple drum machine / sequencer
+
+````
+const char *sample_kick_path = "../samples/PunchyKick.wav";
+  const char *sample_snare_path = "../samples/PunchySnareClap.wav";
+
+  wave_file_t kicks;
+  kicks.set_sample_rate(sample_rate);
+  kicks.set_number_of_channels(1);
+  kicks.set_bits_per_sample(16);
+  sequencer_metadata_t sequencer_data{};
+  sequencer_data.bpm = 150;
+  sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
+  if (kicks.generate_from_drum_machine_sequencer(
+          sequencer_data,
+          {sample_kick_path, "", sample_snare_path, "", sample_kick_path, "",
+           sample_snare_path, "", sample_kick_path, "", sample_snare_path})) {
+
+    if (kicks.save_waveform_as_monochrome_bmp(
+            "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "drum_snare.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
+    }
+    kicks.save("6kicks.wav");
+  } else {
+    std::cout << "Drum machine demo broke :(" << std::endl;
+  }
+````
+
+<img src="https://raw.githubusercontent.com/zulrah93/wave_t/refs/heads/master/generated_waveforms/drum_snare.bmp">
+
 The library also generates windows bitmaps of the waveforms (simple image formats for max compatability) and here is a screenshot in action of the waveform of d#5 trumpet.
 
 <img width="1903" height="84" alt="image" src="https://github.com/zulrah93/wave_t/raw/refs/heads/master/generated_waveforms/d%235_trumpet.bmp" />
