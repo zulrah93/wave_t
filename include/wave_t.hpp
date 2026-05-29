@@ -738,7 +738,7 @@ public:
       if (sequencer_helper::beat_index_to_sample_index(
               beat_index, sample_index, m_header.sample_rate,
               sequencer_metadata.bpm, sequencer_metadata.selected_resolution)) {
-        insert_wav_sample_at(sequence_step_sample_path, sample_index);
+        insert_wav_sample_at(sequence_step_sample_path, sample_index, 0.8);
       } else {
         return false; // Invalid sample path should cause a return false to let
                       // caller know they messed up on their end
@@ -1711,8 +1711,8 @@ private:
       frequency = 1.0;
     }
 
-      m_lfo_terminate.store(false);
-      m_lfo_future = std::async(std::launch::async, [&]() {
+    m_lfo_terminate.store(false);
+    m_lfo_future = std::async(std::launch::async, [&]() {
       m_start_lfo_latch.wait();
       double time = 0.0;
       constexpr const double volume{1.0};
@@ -1765,9 +1765,38 @@ private:
     return true;
   }
 
+  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index,
+                            double volume) {
+
+    if (volume > 1.0) {
+      volume = 1.0;
+    }
+    if (volume < 0.0) {
+      volume = 0.0;
+    }
+    wave_file_t wav_file(wav_file_path);
+    if (!wav_file) {
+      return false;
+    }
+
+    std::transform(
+        wav_file.m_samples.begin(), wav_file.m_samples.end(),
+        wav_file.m_samples.begin(), [&volume](const int64_t & sample) {
+          return static_cast<int64_t>(static_cast<double>(sample) * volume);
+        });
+
+    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.cbegin(),
+                     wav_file.m_samples.cend());
+    return true;
+  }
+
   void insert_rest_at(const sequencer_metadata_t &sequencer_metadata) {
+    if (0 == m_header.number_of_channels) {
+      return;
+    }
     for (size_t _ = 0; _ < sequencer_helper::samples_per_beat(
-                               m_header.sample_rate, sequencer_metadata.bpm);
+                               m_header.sample_rate, sequencer_metadata.bpm) *
+                               m_header.number_of_channels;
          _++) {
       m_samples.push_back(0);
     }

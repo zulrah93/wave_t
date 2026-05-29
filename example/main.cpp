@@ -275,23 +275,27 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 
-  std::cout << "Generating 6 quarter note kick drum samples at 180 BPM"
-            << std::endl;
-
   const char *sample_kick_path = "../samples/PunchyKick.wav";
   const char *sample_snare_path = "../samples/PunchySnareClap.wav";
 
   wave_file_t kicks;
   kicks.set_sample_rate(sample_rate);
-  kicks.set_number_of_channels(1);
+  kicks.set_number_of_channels(
+      2); // 2 channels because the samples are two channels
   kicks.set_bits_per_sample(16);
   sequencer_metadata_t sequencer_data{};
-  sequencer_data.bpm = 150;
+  sequencer_data.bpm = 180;
   sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
-  if (kicks.generate_from_drum_machine_sequencer(
+
+  std::cout << "Generating 6 quarter note kick drum samples at " << sequencer_data.bpm << " BPM"
+            << std::endl;
+
+  if (kicks.generate_from_drum_machine_sequencer( // Empty string in sequence
+                                                  // denotes rest
           sequencer_data,
-          {sample_kick_path, "", sample_snare_path, "", sample_kick_path, "",
-           sample_snare_path, "", sample_kick_path, "", sample_snare_path})) {
+          {sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
+           sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
+           sample_kick_path, "", "", "", "", sample_snare_path})) {
 
     if (kicks.save_waveform_as_monochrome_bmp(
             "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
