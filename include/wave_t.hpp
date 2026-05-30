@@ -1160,24 +1160,31 @@ public:
     if (m_samples.empty()) {
       return false;
     }
+    if (0 == m_header.number_of_channels) {
+      return false;
+    }
 
     constexpr const size_t default_width{2048};
     const size_t width =
         scale_down
             ? default_width
-            : (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
+            : (get_sample_count_as_mono() % static_cast<size_t>(m_header.sample_rate) +
                static_cast<size_t>(m_header.sample_rate));
     const size_t height{128};
     const size_t max_font_height{16};
 
     std::future<std::vector<std::vector<bool>>> bitmap_future =
         std::async(std::launch::async, [&]() {
+          std::vector<double> mono_samples;
+          if (m_header.number_of_channels > 1) {
+              create_vector_mono_samples_from_interleaved_samples(mono_samples);
+          }
           std::vector<std::vector<bool>> bitmap;
           for (size_t _ = 0; _ < height; _++) {
             bitmap.emplace_back(width, false);
           }
           const size_t true_width =
-              (m_samples.size() % static_cast<size_t>(m_header.sample_rate) +
+              (get_sample_count_as_mono() % static_cast<size_t>(m_header.sample_rate) +
                static_cast<size_t>(m_header.sample_rate));
           const size_t max_sample_count = !scale_down ? width : true_width;
           for (size_t column = 0; column < max_sample_count; column++) {
@@ -1189,7 +1196,7 @@ public:
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
                 static_cast<double>(height - max_font_height) *
-                ((index_as_double(column).value_or(0.0) + 1.0) / 2.0));
+                (((mono_samples.empty() ? index_as_double(column).value_or(0.0) : mono_samples[column]) + 1.0) / 2.0));
             if (row >= height) {
               continue;
             }
@@ -1630,6 +1637,13 @@ private:
     return max_sample_value;
   }
 
+  constexpr size_t get_sample_count_as_mono(void) {
+      if (m_header.number_of_channels == 0) {
+          return 0;
+      }
+      return m_samples.size() / m_header.number_of_channels;
+  }
+
   // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet
   // precentage value the oscillator can be of the various waves defined in
   // wave_type_t
@@ -1800,6 +1814,16 @@ private:
          _++) {
       m_samples.push_back(0);
     }
+  }
+
+  bool create_vector_mono_samples_from_interleaved_samples(std::vector<double>& mono_samples) {
+      if (m_header.number_of_channels <= 1) {
+          return false;
+      }
+
+      for(size_t index = 0; index < m_samples.size(); index += m_header.number_of_channels) {
+          mono_samples.push_back(index_as_double(index).value());
+      }
   }
 
   wave_header_t m_header;
