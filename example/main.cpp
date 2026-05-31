@@ -296,7 +296,7 @@ int main(int arguments_size, char **arguments) {
           {sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
            sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
            sample_kick_path, "", "", "", "", sample_snare_path})) {
-
+#ifdef ARM_MAC
     if (kicks.save_waveform_as_monochrome_bmp(
             "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
             pc_screenfont_file_path, "drum_snare.bmp")) {
@@ -305,6 +305,7 @@ int main(int arguments_size, char **arguments) {
     } else {
       std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
+#endif
     kicks.save("6kicks.wav");
   } else {
     std::cout << "Drum machine demo broke :(" << std::endl;
