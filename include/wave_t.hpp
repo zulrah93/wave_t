@@ -39,8 +39,6 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <format>
-#include <functional>
 #include <future>
 #include <ios>
 #include <latch>
@@ -51,7 +49,6 @@
 #include <stdarg.h>
 #include <string>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 using namespace std::literals::complex_literals;
@@ -259,7 +256,8 @@ enum oscillator_type_t : uint8_t {
   frequency_modulation = 2,
   phase_modulation = 3,
   amplitude_modulation = 4,
-  ring_modulation = 5
+  ring_modulation = 5,
+  wave_table = 6
 };
 
 struct oscillator_config_t {
@@ -1177,6 +1175,7 @@ public:
         std::async(std::launch::async, [&]() {
           std::vector<double> mono_samples;
           if (m_header.number_of_channels > 1) {
+              mono_samples.reserve(get_sample_count_as_mono());
               create_vector_mono_samples_from_interleaved_samples(mono_samples);
           }
           std::vector<std::vector<bool>> bitmap;
@@ -1990,5 +1989,4 @@ std::vector<int32_t> oscillator_processing_callback(
 } // namespace processing_functions
 
 #endif
-
 #endif
