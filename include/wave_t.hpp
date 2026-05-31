@@ -1350,8 +1350,42 @@ public:
     return expected_bytes == written_bytes;
   }
 
-#ifdef DEBUG
+  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index) {
+    wave_file_t wav_file(wav_file_path);
+    if (!wav_file) {
+      return false;
+    }
+    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(),
+                     wav_file.m_samples.end());
+    return true;
+  }
 
+  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index,
+                            double volume) {
+
+    if (volume > 1.0) {
+      volume = 1.0;
+    }
+    if (volume < 0.0) {
+      volume = 0.0;
+    }
+    wave_file_t wav_file(wav_file_path);
+    if (!wav_file) {
+      return false;
+    }
+
+    std::transform(
+        wav_file.m_samples.begin(), wav_file.m_samples.end(),
+        wav_file.m_samples.begin(), [&volume](const int64_t & sample) {
+          return static_cast<int64_t>(static_cast<double>(sample) * volume);
+        });
+
+    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.cbegin(),
+                     wav_file.m_samples.cend());
+    return true;
+  }
+
+#ifdef DEBUG
   std::string get_readable_wave_header(void) {
     std::stringstream header;
     header << "chunk_id=0x" << std::hex << std::byteswap(m_header.chunk_id)
@@ -1376,7 +1410,6 @@ public:
            << std::endl;
     return header.str();
   }
-
 #endif
 
 private:
@@ -1766,42 +1799,6 @@ private:
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
       }
     });
-  }
-
-  // Debating if this should be a public interface :)
-  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index) {
-    wave_file_t wav_file(wav_file_path);
-    if (!wav_file) {
-      return false;
-    }
-    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.begin(),
-                     wav_file.m_samples.end());
-    return true;
-  }
-
-  bool insert_wav_sample_at(const std::string &wav_file_path, size_t index,
-                            double volume) {
-
-    if (volume > 1.0) {
-      volume = 1.0;
-    }
-    if (volume < 0.0) {
-      volume = 0.0;
-    }
-    wave_file_t wav_file(wav_file_path);
-    if (!wav_file) {
-      return false;
-    }
-
-    std::transform(
-        wav_file.m_samples.begin(), wav_file.m_samples.end(),
-        wav_file.m_samples.begin(), [&volume](const int64_t & sample) {
-          return static_cast<int64_t>(static_cast<double>(sample) * volume);
-        });
-
-    m_samples.insert(m_samples.begin() + index, wav_file.m_samples.cbegin(),
-                     wav_file.m_samples.cend());
-    return true;
   }
 
   void insert_rest_at(const sequencer_metadata_t &sequencer_metadata) {
