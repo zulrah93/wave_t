@@ -1833,6 +1833,39 @@ private:
   size_t m_sink_index{0ul};
 };
 
+
+class wave_table_t {
+public:
+      wave_table_t() = delete;
+      wave_table_t(const std::string& wave_table_sample_path, 
+              const size_t& wave_table_index, const size_t wave_table_length) : 
+              m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}  {}
+
+      
+      operator bool() {
+          return m_wave_table_sample && (m_wave_table_length > 0 && m_wave_table_index < m_wave_table_sample.sample_size());
+      }
+
+
+      bool has_wave_table_loaded_succesfully() {
+            return static_cast<bool>(*this);
+      }
+    
+      int32_t next_sample() { // Unsafe if no bool operator check is called
+            int32_t value = m_wave_table_sample[internal_index].value();
+            internal_index++;
+            internal_index %= (m_wave_table_index + m_wave_table_length);
+            return internal_index;
+      }
+
+      
+private:
+  wave_file_t m_wave_table_sample;
+  size_t m_wave_table_index{};
+  size_t m_wave_table_length{1ul};
+  size_t internal_index{};
+};
+
 // Not to be directly used but more for the wave_file_t to help generate nice
 // synth sounds!
 namespace processing_functions {
