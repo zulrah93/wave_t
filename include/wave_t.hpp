@@ -76,7 +76,8 @@ enum wave_type_t : uint8_t {
   sine = 1,
   triangle = 2,
   square = 4,
-  sawtooth = 8
+  sawtooth = 8,
+  wave_table = 9, // Read more here https://en.wikipedia.org/wiki/Wavetable_synthesis
 };
 
 // Provides functions that generate signals and dft and invesre dft function
@@ -256,8 +257,13 @@ enum oscillator_type_t : uint8_t {
   frequency_modulation = 2,
   phase_modulation = 3,
   amplitude_modulation = 4,
-  ring_modulation = 5,
-  wave_table = 6
+  ring_modulation = 5
+};
+
+struct wave_table_config_t {
+   const char* wave_table_path;
+   size_t index;
+   size_t length;
 };
 
 struct oscillator_config_t {
@@ -269,6 +275,7 @@ struct oscillator_config_t {
   double modulation_amplitude; // Used by modulation to control strength or
                                // amplitutde of the modulation signal
   double initial_phase_offset;
+  wave_table_config_t wave_table_config;
 };
 
 enum effects_type_t : uint8_t {
@@ -1840,6 +1847,7 @@ public:
       wave_table_t(const std::string& wave_table_sample_path, 
               const size_t& wave_table_index, const size_t wave_table_length) : 
               m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}  {}
+      wave_table_t(const wave_table_config_t& config) : wave_table_t(config.wave_table_path, config.index, config.length) {}
 
       
       operator bool() {
@@ -1855,7 +1863,7 @@ public:
             int32_t value = m_wave_table_sample[internal_index].value();
             internal_index++;
             internal_index %= (m_wave_table_index + m_wave_table_length);
-            return internal_index;
+            return value;
       }
 
       
@@ -1918,8 +1926,15 @@ std::vector<int32_t> oscillator_processing_callback(
   }
 
   samples.reserve(sample_size);
+  
   double phase{};
   double time{};
+  
+  wave_table_t* loaded_wave_table{nullptr};
+  if (nullptr != primary_osc->wave_table_config.wave_table_path && primary_osc->wave_table_config.length > 0) {
+          loaded_wave_table = new wave_table_t(primary_osc->wave_table_config);     
+  }
+
   for (size_t _{}; _ < sample_size; _++) {
     int64_t sample{};
     double offset{};
@@ -1934,7 +1949,7 @@ std::vector<int32_t> oscillator_processing_callback(
         continue;
       }
 
-      if (selected_osc->osc_to_modulate = osc_to_process) {
+      if ((selected_osc->osc_to_modulate == oscillator_selection_t::none_selected) || (selected_osc->osc_to_modulate == osc_to_process)) {
         continue;
       }
 
@@ -2006,6 +2021,12 @@ std::vector<int32_t> oscillator_processing_callback(
                                 primary_osc->frequency + frequency_offset);
     }
 
+    if ((wave_type & wave_type_t::wave_table) 
+                    && (loaded_wave_table && loaded_wave_table->has_wave_table_loaded_succesfully())) {
+        sample += INT_MAX / 2; // loaded_wave_table->next_sample();
+        
+    }
+
     // Ring modulation we will multiply the carrier signal with the modulating
     // signal (sine, triangle, etc.)
     if (ring_modulation) {
@@ -2014,6 +2035,11 @@ std::vector<int32_t> oscillator_processing_callback(
 
     time += (1.0 / static_cast<double>(sample_rate));
     samples.push_back(sample);
+  }
+
+
+  if (nullptr != loaded_wave_table) {
+      delete loaded_wave_table;
   }
 
   return samples;
