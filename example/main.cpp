@@ -280,7 +280,7 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
   configuration.oscillator_a.wave_table_config.wave_table_path =  "../wave_tables/BassTables 31.wav";
   configuration.oscillator_a.wave_table_config.index = 40;
-  configuration.oscillator_a.wave_table_config.length = 1000;
+  configuration.oscillator_a.wave_table_config.length = 40;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
   configuration.oscillator_a.initial_phase_offset = 0.0;

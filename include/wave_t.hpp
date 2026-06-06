@@ -2023,7 +2023,7 @@ std::vector<int32_t> oscillator_processing_callback(
 
     if ((wave_type & wave_type_t::wave_table) 
                     && (loaded_wave_table && loaded_wave_table->has_wave_table_loaded_succesfully())) {
-        sample += INT_MAX / 2; // loaded_wave_table->next_sample();
+        sample += loaded_wave_table->next_sample();
         
     }
 
