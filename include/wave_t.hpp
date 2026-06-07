@@ -1849,10 +1849,10 @@ public:
       // Pass in path plus and index plus length these will be bound checked hopefully :) but not in the ctor
       wave_table_t(const std::string& wave_table_sample_path, 
               const size_t& wave_table_index, const size_t wave_table_length) : 
-              m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}  {}
+              m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}, m_internal_index{wave_table_index}  {}
       
       // Pass in a configuration struct a convienience ctor
-      wave_table_t(const wave_table_config_t& config) : wave_table_t(config.wave_table_path, config.index, config.length) {}
+      wave_table_t(const wave_table_config_t& config) : wave_table_t(config.wave_table_path, config.index, config.length)  {}
       
       // Supports multiple slices of the wav file to be one linear sample it will make sense if you read the code :)
       wave_table_t(const std::string& wave_table_sample_path, std::vector<std::pair<size_t,size_t>> slices) : m_wave_table_sample{wave_table_sample_path}, m_slices{slices} {}
@@ -1861,12 +1861,18 @@ public:
       bool build_slices() {
           if (m_wave_table_sample && !m_slices.empty()) {
               for(auto& slice : m_slices) {
-                size_t index = slice.first;
-                size_t length = slice.second;
-                if (index >= m_wave_table_sample.sample_size() || length == 0) {
+                const size_t& start = slice.first;
+                const size_t& length = slice.second;
+                if (0 == length) {
                     return false;
                 }
-                for(index; index < (index+length); index++) {
+                if ((start+length) >= m_wave_table_sample.sample_size()) {
+                    return false;
+                }
+                for(size_t index = start; index < (start + length); index++) {
+                    if (!m_wave_table_sample[index].has_value()) {
+                      return false;
+                    }
                     m_slices_as_linear_vector.push_back(m_wave_table_sample[index].value());
                 }
             }
@@ -1887,14 +1893,14 @@ public:
     
       int32_t next_sample() { // Unsafe if no bool operator check is called
             if (!m_slices_as_linear_vector.empty()) {
-                int32_t value = m_slices_as_linear_vector[internal_index];
-                internal_index++;
-                internal_index %= m_slices_as_linear_vector.size();
+                int32_t value = m_slices_as_linear_vector[m_internal_index];
+                m_internal_index++;
+                m_internal_index %= m_slices_as_linear_vector.size();
                 return value;
             }
-            int32_t value = m_wave_table_sample[internal_index].value();
-            internal_index++;
-            internal_index %= (m_wave_table_index + m_wave_table_length);
+            int32_t value = m_wave_table_sample[m_internal_index].value();
+            m_internal_index++;
+            m_internal_index %= (m_wave_table_index + m_wave_table_length);
             return value;
       }
 
@@ -1903,7 +1909,7 @@ private:
   wave_file_t m_wave_table_sample;
   size_t m_wave_table_index{};
   size_t m_wave_table_length{1ul};
-  size_t internal_index{};
+  size_t m_internal_index{};
   std::vector<int64_t> m_slices_as_linear_vector;
   std::vector<std::pair<size_t, size_t>> m_slices;
 };
