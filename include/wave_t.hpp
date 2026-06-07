@@ -77,7 +77,8 @@ enum wave_type_t : uint8_t {
   triangle = 2,
   square = 4,
   sawtooth = 8,
-  wave_table = 9, // Read more here https://en.wikipedia.org/wiki/Wavetable_synthesis
+  wave_table =
+      9, // Read more here https://en.wikipedia.org/wiki/Wavetable_synthesis
 };
 
 // Provides functions that generate signals and dft and invesre dft function
@@ -261,10 +262,10 @@ enum oscillator_type_t : uint8_t {
 };
 
 struct wave_table_config_t {
-   const char* wave_table_path;
-   size_t index;
-   size_t length;
-   std::vector<std::pair<size_t, size_t>> slices; 
+  const char *wave_table_path;
+  size_t index;
+  size_t length;
+  std::vector<std::pair<size_t, size_t>> slices;
 };
 
 struct oscillator_config_t {
@@ -1171,11 +1172,11 @@ public:
     }
 
     constexpr const size_t default_width{2048};
-    const size_t width =
-        scale_down
-            ? default_width
-            : (get_sample_count_as_mono() % static_cast<size_t>(m_header.sample_rate) +
-               static_cast<size_t>(m_header.sample_rate));
+    const size_t width = scale_down
+                             ? default_width
+                             : (get_sample_count_as_mono() %
+                                    static_cast<size_t>(m_header.sample_rate) +
+                                static_cast<size_t>(m_header.sample_rate));
     const size_t height{128};
     const size_t max_font_height{16};
 
@@ -1183,15 +1184,16 @@ public:
         std::async(std::launch::async, [&]() {
           std::vector<double> mono_samples;
           if (m_header.number_of_channels > 1) {
-              mono_samples.reserve(get_sample_count_as_mono());
-              create_vector_mono_samples_from_interleaved_samples(mono_samples);
+            mono_samples.reserve(get_sample_count_as_mono());
+            create_vector_mono_samples_from_interleaved_samples(mono_samples);
           }
           std::vector<std::vector<bool>> bitmap;
           for (size_t _ = 0; _ < height; _++) {
             bitmap.emplace_back(width, false);
           }
           const size_t true_width =
-              (get_sample_count_as_mono() % static_cast<size_t>(m_header.sample_rate) +
+              (get_sample_count_as_mono() %
+                   static_cast<size_t>(m_header.sample_rate) +
                static_cast<size_t>(m_header.sample_rate));
           const size_t max_sample_count = !scale_down ? width : true_width;
           for (size_t column = 0; column < max_sample_count; column++) {
@@ -1203,7 +1205,10 @@ public:
                                    static_cast<double>(max_sample_count)));
             size_t row = static_cast<size_t>(
                 static_cast<double>(height - max_font_height) *
-                (((mono_samples.empty() ? index_as_double(column).value_or(0.0) : mono_samples[column]) + 1.0) / 2.0));
+                (((mono_samples.empty() ? index_as_double(column).value_or(0.0)
+                                        : mono_samples[column]) +
+                  1.0) /
+                 2.0));
             if (row >= height) {
               continue;
             }
@@ -1383,7 +1388,7 @@ public:
 
     std::transform(
         wav_file.m_samples.begin(), wav_file.m_samples.end(),
-        wav_file.m_samples.begin(), [&volume](const int64_t & sample) {
+        wav_file.m_samples.begin(), [&volume](const int64_t &sample) {
           return static_cast<int64_t>(static_cast<double>(sample) * volume);
         });
 
@@ -1678,10 +1683,10 @@ private:
   }
 
   constexpr size_t get_sample_count_as_mono(void) {
-      if (m_header.number_of_channels == 0) {
-          return 0;
-      }
-      return m_samples.size() / m_header.number_of_channels;
+    if (m_header.number_of_channels == 0) {
+      return 0;
+    }
+    return m_samples.size() / m_header.number_of_channels;
   }
 
   // Applies a frequency (could be lfo or not) oscillator to the bitcrusher wet
@@ -1820,14 +1825,16 @@ private:
     }
   }
 
-  bool create_vector_mono_samples_from_interleaved_samples(std::vector<double>& mono_samples) {
-      if (m_header.number_of_channels <= 1) {
-          return false;
-      }
+  bool create_vector_mono_samples_from_interleaved_samples(
+      std::vector<double> &mono_samples) {
+    if (m_header.number_of_channels <= 1) {
+      return false;
+    }
 
-      for(size_t index = 0; index < m_samples.size(); index += m_header.number_of_channels) {
-          mono_samples.push_back(index_as_double(index).value());
-      }
+    for (size_t index = 0; index < m_samples.size();
+         index += m_header.number_of_channels) {
+      mono_samples.push_back(index_as_double(index).value());
+    }
   }
 
   wave_header_t m_header;
@@ -1841,70 +1848,75 @@ private:
   size_t m_sink_index{0ul};
 };
 
-
 class wave_table_t {
 public:
-      wave_table_t() = delete;
-      
-      // Pass in path plus and index plus length these will be bound checked hopefully :) but not in the ctor
-      wave_table_t(const std::string& wave_table_sample_path, 
-              const size_t& wave_table_index, const size_t wave_table_length) : 
-              m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}, m_internal_index{wave_table_index}  {}
-      
-      // Pass in a configuration struct a convienience ctor
-      wave_table_t(const wave_table_config_t& config) : wave_table_t(config.wave_table_path, config.index, config.length)  {}
-      
-      // Supports multiple slices of the wav file to be one linear sample it will make sense if you read the code :)
-      wave_table_t(const std::string& wave_table_sample_path, std::vector<std::pair<size_t,size_t>> slices) : m_wave_table_sample{wave_table_sample_path}, m_slices{slices} {}
+  wave_table_t() = delete;
 
+  // Pass in path plus and index plus length these will be bound checked
+  // hopefully :) but not in the ctor
+  wave_table_t(const std::string &wave_table_sample_path,
+               const size_t &wave_table_index, const size_t wave_table_length)
+      : m_wave_table_sample(wave_table_sample_path),
+        m_wave_table_index{wave_table_index},
+        m_wave_table_length{wave_table_length},
+        m_internal_index{wave_table_index} {}
 
-      bool build_slices() {
-          if (m_wave_table_sample && !m_slices.empty()) {
-              for(auto& slice : m_slices) {
-                const size_t& start = slice.first;
-                const size_t& length = slice.second;
-                if (0 == length) {
-                    return false;
-                }
-                if ((start+length) >= m_wave_table_sample.sample_size()) {
-                    return false;
-                }
-                for(size_t index = start; index < (start + length); index++) {
-                    if (!m_wave_table_sample[index].has_value()) {
-                      return false;
-                    }
-                    m_slices_as_linear_vector.push_back(m_wave_table_sample[index].value());
-                }
-            }
-             return true;
-          }
+  // Pass in a configuration struct a convienience ctor
+  wave_table_t(const wave_table_config_t &config)
+      : wave_table_t(config.wave_table_path, config.index, config.length) {}
 
+  // Supports multiple slices of the wav file to be one linear sample it will
+  // make sense if you read the code :)
+  wave_table_t(const std::string &wave_table_sample_path,
+               std::vector<std::pair<size_t, size_t>> slices)
+      : m_wave_table_sample{wave_table_sample_path}, m_slices{slices} {}
+
+  bool build_slices() {
+    if (m_wave_table_sample && !m_slices.empty()) {
+      for (auto &slice : m_slices) {
+        const size_t &start = slice.first;
+        const size_t &length = slice.second;
+        if (0 == length) {
           return false;
+        }
+        if ((start + length) >= m_wave_table_sample.sample_size()) {
+          return false;
+        }
+        for (size_t index = start; index < (start + length); index++) {
+          if (!m_wave_table_sample[index].has_value()) {
+            return false;
+          }
+          m_slices_as_linear_vector.push_back(
+              m_wave_table_sample[index].value());
+        }
       }
-      
-      operator bool() {
-          return m_wave_table_sample && (m_wave_table_length > 0 && m_wave_table_index < m_wave_table_sample.sample_size());
-      }
+      return true;
+    }
 
+    return false;
+  }
 
-      bool has_wave_table_loaded_succesfully() {
-            return static_cast<bool>(*this);
-      }
-    
-      int32_t next_sample() { // Unsafe if no bool operator check is called
-            if (!m_slices_as_linear_vector.empty()) {
-                int32_t value = m_slices_as_linear_vector[m_internal_index];
-                m_internal_index++;
-                m_internal_index %= m_slices_as_linear_vector.size();
-                return value;
-            }
-            int32_t value = m_wave_table_sample[m_internal_index].value();
-            m_internal_index++;
-            m_internal_index %= (m_wave_table_index + m_wave_table_length);
-            return value;
-      }
+  operator bool() {
+    return m_wave_table_sample &&
+           (m_wave_table_length > 0 &&
+            m_wave_table_index < m_wave_table_sample.sample_size());
+  }
 
-      
+  bool has_wave_table_loaded_succesfully() { return static_cast<bool>(*this); }
+
+  int32_t next_sample() { // Unsafe if no bool operator check is called
+    if (!m_slices_as_linear_vector.empty()) {
+      int32_t value = m_slices_as_linear_vector[m_internal_index];
+      m_internal_index++;
+      m_internal_index %= m_slices_as_linear_vector.size();
+      return value;
+    }
+    int32_t value = m_wave_table_sample[m_internal_index].value();
+    m_internal_index++;
+    m_internal_index %= (m_wave_table_index + m_wave_table_length);
+    return value;
+  }
+
 private:
   wave_file_t m_wave_table_sample;
   size_t m_wave_table_index{};
@@ -1966,19 +1978,22 @@ std::vector<int32_t> oscillator_processing_callback(
   }
 
   samples.reserve(sample_size);
-  
+
   double phase{};
   double time{};
-  
-  wave_table_t* loaded_wave_table{nullptr};
-  if (nullptr != primary_osc->wave_table_config.wave_table_path && primary_osc->wave_table_config.length > 0) {
-          loaded_wave_table = new wave_table_t(primary_osc->wave_table_config);     
-  }
-  else if (nullptr != primary_osc->wave_table_config.wave_table_path && !primary_osc->wave_table_config.slices.empty()) {
-          loaded_wave_table = new wave_table_t(primary_osc->wave_table_config.wave_table_path, primary_osc->wave_table_config.slices);
-          if (!loaded_wave_table->build_slices()) {
-             loaded_wave_table = nullptr;
-          }
+
+  wave_table_t *loaded_wave_table{nullptr};
+  if (nullptr != primary_osc->wave_table_config.wave_table_path &&
+      primary_osc->wave_table_config.length > 0) {
+    loaded_wave_table = new wave_table_t(primary_osc->wave_table_config);
+  } else if (nullptr != primary_osc->wave_table_config.wave_table_path &&
+             !primary_osc->wave_table_config.slices.empty()) {
+    loaded_wave_table =
+        new wave_table_t(primary_osc->wave_table_config.wave_table_path,
+                         primary_osc->wave_table_config.slices);
+    if (!loaded_wave_table->build_slices()) {
+      loaded_wave_table = nullptr;
+    }
   }
 
   for (size_t _{}; _ < sample_size; _++) {
@@ -1995,7 +2010,9 @@ std::vector<int32_t> oscillator_processing_callback(
         continue;
       }
 
-      if ((selected_osc->osc_to_modulate == oscillator_selection_t::none_selected) || (selected_osc->osc_to_modulate == osc_to_process)) {
+      if ((selected_osc->osc_to_modulate ==
+           oscillator_selection_t::none_selected) ||
+          (selected_osc->osc_to_modulate == osc_to_process)) {
         continue;
       }
 
@@ -2067,10 +2084,10 @@ std::vector<int32_t> oscillator_processing_callback(
                                 primary_osc->frequency + frequency_offset);
     }
 
-    if ((wave_type & wave_type_t::wave_table) 
-                    && (loaded_wave_table && loaded_wave_table->has_wave_table_loaded_succesfully())) {
-        sample += loaded_wave_table->next_sample();
-        
+    if ((wave_type & wave_type_t::wave_table) &&
+        (loaded_wave_table &&
+         loaded_wave_table->has_wave_table_loaded_succesfully())) {
+      sample += loaded_wave_table->next_sample();
     }
 
     // Ring modulation we will multiply the carrier signal with the modulating
@@ -2083,9 +2100,8 @@ std::vector<int32_t> oscillator_processing_callback(
     samples.push_back(sample);
   }
 
-
   if (nullptr != loaded_wave_table) {
-      delete loaded_wave_table;
+    delete loaded_wave_table;
   }
 
   return samples;
