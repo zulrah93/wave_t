@@ -61,6 +61,7 @@ double detune(double x) {
  */
 
 int main(int arguments_size, char **arguments) {
+
 #ifndef ARM_MAC
   std::cout << "wave_t.hpp usage example!" << std::endl;
 #else
@@ -187,10 +188,7 @@ int main(int arguments_size, char **arguments) {
 
   synth_config_t configuration{};
 
-#pragma message("Uncomment line below to get alternative synth demo")
-  // #define AM_PM_MODULATION_DEMO
-
-#ifndef AM_PM_MODULATION_DEMO
+#ifdef SUPER_SAW_DEMO
   // Supersaw example -- hopefully :P
   constexpr double detune_amount = 0.0;
 
@@ -275,44 +273,47 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 
-  const char *sample_kick_path = "../samples/PunchyKick.wav";
-  const char *sample_snare_path = "../samples/PunchySnareClap.wav";
+#elif defined(WAVE_TABLE_DEMO)
+  configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
+  configuration.oscillator_a.wave_type = wave_type_t::wave_table;
+  configuration.oscillator_a.wave_table_config.wave_table_path =
+      "../wave_tables/bit_crushed_c4_e4_rm_fm.wav";
+  configuration.oscillator_a.wave_table_config.slices = {
+      {140, sample_rate / 4},
+      {1000, sample_rate / 2},
+      {0, 100},
+      {sample_rate, sample_rate / 2}};
+  // configuration.oscillator_a.wave_table_config.index = 140;
+  // configuration.oscillator_a.wave_table_config.length = sample_rate / 4;
+  configuration.oscillator_a.osc_to_modulate =
+      oscillator_selection_t::none_selected;
+  configuration.oscillator_a.initial_phase_offset = 0.0;
 
-  wave_file_t kicks;
-  kicks.set_sample_rate(sample_rate);
-  kicks.set_number_of_channels(
-      2); // 2 channels because the samples are two channels
-  kicks.set_bits_per_sample(16);
-  sequencer_metadata_t sequencer_data{};
-  sequencer_data.bpm = 180;
-  sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
+  constexpr const double seconds{5.55};
 
-  std::cout << "Generating 6 quarter note kick drum samples at " << sequencer_data.bpm << " BPM"
-            << std::endl;
+  const size_t synth_sample_size =
+      static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
 
-  if (kicks.generate_from_drum_machine_sequencer( // Empty string in sequence
-                                                  // denotes rest
-          sequencer_data,
-          {sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
-           sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
-           sample_kick_path, "", "", "", "", sample_snare_path})) {
-#ifdef ARM_MAC
-    if (kicks.save_waveform_as_monochrome_bmp(
-            "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
-            pc_screenfont_file_path, "drum_snare.bmp")) {
+  constexpr const double volume{0.5};
+  if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
+              << " dBFS is the peak of this generated wave table synth sound!!"
+              << std::endl;
+
+    if (!synth_output.save_waveform_as_monochrome_bmp(
+            "synth.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "synth.bmp")) {
       std::cout << "Failed to save generated monochrome bitmap of wav file!"
                 << std::endl;
     } else {
       std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
-#endif
-    kicks.save("6kicks.wav");
+    synth_output.save("synth_output.wav");
   } else {
-    std::cout << "Drum machine demo broke :(" << std::endl;
+    std::cout
+        << "Invalid synth configuration or failed to generate synth -- sorry."
+        << std::endl;
   }
-  std::cout
-      << "Demo finished!! If you don't see this message assume process crashed!"
-      << std::endl;
 #else
 
   constexpr const double E4_FREQUENCY{329.6276};
@@ -400,10 +401,46 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 
+#endif
+
+  const char *sample_kick_path = "../samples/PunchyKick.wav";
+  const char *sample_snare_path = "../samples/PunchySnareClap.wav";
+
+  wave_file_t kicks;
+  kicks.set_sample_rate(sample_rate);
+  kicks.set_number_of_channels(
+      2); // 2 channels because the samples are two channels
+  kicks.set_bits_per_sample(16);
+  sequencer_metadata_t sequencer_data{};
+  sequencer_data.bpm = 180;
+  sequencer_data.selected_resolution = sequencer_resolution_t::quarter_notes;
+
+  std::cout << "Generating 6 quarter note kick drum samples at "
+            << sequencer_data.bpm << " BPM" << std::endl;
+
+  if (kicks.generate_from_drum_machine_sequencer( // Empty string in sequence
+                                                  // denotes rest
+          sequencer_data,
+          {sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
+           sample_kick_path, "", "", "", "", sample_snare_path, "", "", "", "",
+           sample_kick_path, "", "", "", "", sample_snare_path})) {
+#ifdef ARM_MAC
+    if (kicks.save_waveform_as_monochrome_bmp(
+            "drum_snare.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "drum_snare.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
+    }
+#endif
+    kicks.save("6kicks.wav");
+  } else {
+    std::cout << "Drum machine demo broke :(" << std::endl;
+  }
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
-#endif
 
   return 0;
 }
