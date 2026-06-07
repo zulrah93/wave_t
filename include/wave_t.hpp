@@ -264,6 +264,7 @@ struct wave_table_config_t {
    const char* wave_table_path;
    size_t index;
    size_t length;
+   std::vector<std::pair<size_t, size_t>> slices; 
 };
 
 struct oscillator_config_t {
@@ -1844,11 +1845,36 @@ private:
 class wave_table_t {
 public:
       wave_table_t() = delete;
+      
+      // Pass in path plus and index plus length these will be bound checked hopefully :) but not in the ctor
       wave_table_t(const std::string& wave_table_sample_path, 
               const size_t& wave_table_index, const size_t wave_table_length) : 
               m_wave_table_sample(wave_table_sample_path), m_wave_table_index{wave_table_index}, m_wave_table_length{wave_table_length}  {}
+      
+      // Pass in a configuration struct a convienience ctor
       wave_table_t(const wave_table_config_t& config) : wave_table_t(config.wave_table_path, config.index, config.length) {}
+      
+      // Supports multiple slices of the wav file to be one linear sample it will make sense if you read the code :)
+      wave_table_t(const std::string& wave_table_sample_path, std::vector<std::pair<size_t,size_t>> slices) : m_wave_table_sample{wave_table_sample_path}, m_slices{slices} {}
 
+
+      bool build_slices() {
+          if (m_wave_table_sample && !m_slices.empty()) {
+              for(auto& slice : m_slices) {
+                size_t index = slice.first;
+                size_t length = slice.second;
+                if (index >= m_wave_table_sample.sample_size() || length == 0) {
+                    return false;
+                }
+                for(index; index < (index+length); index++) {
+                    m_slices_as_linear_vector.push_back(m_wave_table_sample[index].value());
+                }
+            }
+             return true;
+          }
+
+          return false;
+      }
       
       operator bool() {
           return m_wave_table_sample && (m_wave_table_length > 0 && m_wave_table_index < m_wave_table_sample.sample_size());
@@ -1860,6 +1886,12 @@ public:
       }
     
       int32_t next_sample() { // Unsafe if no bool operator check is called
+            if (!m_slices_as_linear_vector.empty()) {
+                int32_t value = m_slices_as_linear_vector[internal_index];
+                internal_index++;
+                internal_index %= m_slices_as_linear_vector.size();
+                return value;
+            }
             int32_t value = m_wave_table_sample[internal_index].value();
             internal_index++;
             internal_index %= (m_wave_table_index + m_wave_table_length);
@@ -1872,6 +1904,8 @@ private:
   size_t m_wave_table_index{};
   size_t m_wave_table_length{1ul};
   size_t internal_index{};
+  std::vector<int64_t> m_slices_as_linear_vector;
+  std::vector<std::pair<size_t, size_t>> m_slices;
 };
 
 // Not to be directly used but more for the wave_file_t to help generate nice
@@ -1933,6 +1967,12 @@ std::vector<int32_t> oscillator_processing_callback(
   wave_table_t* loaded_wave_table{nullptr};
   if (nullptr != primary_osc->wave_table_config.wave_table_path && primary_osc->wave_table_config.length > 0) {
           loaded_wave_table = new wave_table_t(primary_osc->wave_table_config);     
+  }
+  else if (nullptr != primary_osc->wave_table_config.wave_table_path && !primary_osc->wave_table_config.slices.empty()) {
+          loaded_wave_table = new wave_table_t(primary_osc->wave_table_config.wave_table_path, primary_osc->wave_table_config.slices);
+          if (!loaded_wave_table->build_slices()) {
+             loaded_wave_table = nullptr;
+          }
   }
 
   for (size_t _{}; _ < sample_size; _++) {

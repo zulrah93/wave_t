@@ -279,8 +279,9 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
   configuration.oscillator_a.wave_table_config.wave_table_path =  "../wave_tables/BassTables 31.wav";
-  configuration.oscillator_a.wave_table_config.index = 140;
-  configuration.oscillator_a.wave_table_config.length = sample_rate / 4;
+  configuration.oscillator_a.wave_table_config.slices = { {140, sample_rate / 4}, {1000, sample_rate / 2}, {0, 100}, {sample_rate, sample_rate / 2} };
+  //configuration.oscillator_a.wave_table_config.index = 140;
+  //configuration.oscillator_a.wave_table_config.length = sample_rate / 4;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
   configuration.oscillator_a.initial_phase_offset = 0.0;
