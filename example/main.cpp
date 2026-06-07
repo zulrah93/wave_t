@@ -283,11 +283,20 @@ int main(int arguments_size, char **arguments) {
       {1000, sample_rate / 2},
       {0, 100},
       {sample_rate, sample_rate / 2}};
-  // configuration.oscillator_a.wave_table_config.index = 140;
-  // configuration.oscillator_a.wave_table_config.length = sample_rate / 4;
+
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
   configuration.oscillator_a.initial_phase_offset = 0.0;
+
+  // Or just one slice
+  // configuration.oscillator_a.wave_table_config.index = 140;
+  // configuration.oscillator_a.wave_table_config.length = sample_rate / 4;
+  
+  configuration.oscillator_b.operator_type = oscillator_type_t::carrier;
+  configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_b.frequency = C4_FREQUENCY;
+  configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
 
   constexpr const double seconds{5.55};
 
@@ -301,8 +310,8 @@ int main(int arguments_size, char **arguments) {
               << std::endl;
 
     if (!synth_output.save_waveform_as_monochrome_bmp(
-            "synth.bmp", scale_down_image, shade_waveform, print_text,
-            pc_screenfont_file_path, "synth.bmp")) {
+            "wave_table_synth.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "wave_table_synth.bmp")) {
       std::cout << "Failed to save generated monochrome bitmap of wav file!"
                 << std::endl;
     } else {
