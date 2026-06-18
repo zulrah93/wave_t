@@ -1879,10 +1879,11 @@ public:
         if (0 == length) {
           return false;
         }
-        if ((start + length) >= m_wave_table_sample.sample_size()) {
+        size_t true_size{length * m_wave_table_sample.get_header().number_of_channels};
+        if ((start + true_size) >= m_wave_table_sample.sample_size()) {
           return false;
         }
-        for (size_t index = start; index < (start + length); index++) {
+        for (size_t index = start; index < (start + true_size); index++) {
           if (!m_wave_table_sample[index].has_value()) {
             return false;
           }

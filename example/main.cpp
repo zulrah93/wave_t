@@ -277,7 +277,7 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
   configuration.oscillator_a.wave_table_config.wave_table_path =
-      "../wave_tables/bit_crushed_c4_e4_rm_fm.wav";
+      "../wave_tables/stereo_wave_table.wav";
   configuration.oscillator_a.wave_table_config.slices = {
       {140, sample_rate / 4},
       {1000, sample_rate / 2},
