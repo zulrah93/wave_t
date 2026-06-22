@@ -1879,7 +1879,8 @@ public:
         if (0 == length) {
           return false;
         }
-        size_t true_size{length * m_wave_table_sample.get_header().number_of_channels};
+        size_t true_size{length *
+                         m_wave_table_sample.get_header().number_of_channels};
         if ((start + true_size) >= m_wave_table_sample.sample_size()) {
           return false;
         }
@@ -1905,6 +1906,34 @@ public:
 
   bool has_wave_table_loaded_succesfully() { return static_cast<bool>(*this); }
 
+  std::pair<int32_t, int32_t> next_stereo_sample() {
+    if (m_wave_table_sample.get_header().number_of_channels == 1) {
+        int32_t sample = next_sample();
+        return {sample, sample};
+    }
+    return {next_sample(), next_sample()};
+  }
+
+  int32_t next_mono_sample() {
+    
+    if (!m_slices_as_linear_vector.empty()) {
+
+      int32_t sample = m_slices_as_linear_vector[m_internal_index];
+      m_internal_index += m_wave_table_sample.get_header().number_of_channels;
+      m_internal_index %= m_slices_as_linear_vector.size();
+      return sample;
+    }
+
+    int32_t sample = m_wave_table_sample[m_internal_index].value();
+
+    m_internal_index += m_wave_table_sample.get_header().number_of_channels;
+    m_internal_index %= (m_wave_table_index +
+                         (m_wave_table_length *
+                          m_wave_table_sample.get_header().number_of_channels));
+    return sample;
+  }
+
+private:
   int32_t next_sample() { // Unsafe if no bool operator check is called
     if (!m_slices_as_linear_vector.empty()) {
       int32_t value = m_slices_as_linear_vector[m_internal_index];
@@ -1914,11 +1943,11 @@ public:
     }
     int32_t value = m_wave_table_sample[m_internal_index].value();
     m_internal_index++;
-    m_internal_index %= (m_wave_table_index + m_wave_table_length);
+    m_internal_index %= (m_wave_table_index +
+                         (m_wave_table_length *
+                          m_wave_table_sample.get_header().number_of_channels));
     return value;
   }
-
-private:
   wave_file_t m_wave_table_sample;
   size_t m_wave_table_index{};
   size_t m_wave_table_length{1ul};
@@ -2088,7 +2117,7 @@ std::vector<int32_t> oscillator_processing_callback(
     if ((wave_type & wave_type_t::wave_table) &&
         (loaded_wave_table &&
          loaded_wave_table->has_wave_table_loaded_succesfully())) {
-      sample += loaded_wave_table->next_sample();
+      sample += loaded_wave_table->next_mono_sample();
     }
 
     // Ring modulation we will multiply the carrier signal with the modulating
