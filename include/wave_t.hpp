@@ -1914,6 +1914,20 @@ public:
     return {next_sample(), next_sample()};
   }
 
+  // For now works only when PCM WAV files is mono not multi channel like stereo etc.
+  bool next_n_channel_sample(std::vector<int32_t>& interleaved_samples, const size_t& number_of_channels) {
+      if (number_of_channels == 0) {
+          return false;
+      }
+      if (m_wave_table_sample.get_header().number_of_channels != 1) {
+          return false;
+      }
+      int32_t sample = next_sample();
+      std::vector<int32_t> range(number_of_channels, sample);
+      interleaved_samples.insert(interleaved_samples.begin(), range.begin(), range.end());
+      return true;
+  }
+
   int32_t next_mono_sample() {
     
     if (!m_slices_as_linear_vector.empty()) {
