@@ -50,6 +50,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <fstream>
 
 using namespace std::literals::complex_literals;
 
@@ -727,7 +728,18 @@ public:
     return true;
   }
 
-  bool generate_from_livecoding_script(const std::string& script_path) {
+  bool generate_from_music_live_coding_script(const std::string& script_path) {
+      std::ifstream script_stream(script_path); 
+      if (script_stream.is_open()) {
+          std::string current_line;
+          synth_config_t configuration{};
+          while(std::getline(script_stream, current_line, ';')) {
+              if (current_line.empty()) {
+                  continue;
+              }
+          }
+          return true;
+      }
       return false;
   }
 
