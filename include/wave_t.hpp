@@ -727,6 +727,10 @@ public:
     return true;
   }
 
+  bool generate_from_livecoding_script(const std::string& script_path) {
+      return false;
+  }
+
   // The parameter sequence_steps is a vector of strings where if the element is
   // an empty string no sample is added else the sample is added with a specific
   // path

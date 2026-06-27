@@ -1,0 +1,20 @@
+$configuration.oscillator_a.operator_type = carrier;
+$configuration.oscillator_a.wave_type = wave_table;
+$configuration.oscillator_a.wave_table_config.wave_table_path = "../wave_tables/stereo_wave_table.wav";
+$configuration.oscillator_a.osc_to_modulate = none_selected;
+$configuration.oscillator_a.initial_phase_offset = 0.0;
+
+  
+$configuration.oscillator_a.wave_table_config.index = 140;
+$configuration.oscillator_a.wave_table_config.length = 11025;
+
+$configuration.oscillator_b.operator_type = carrier;
+$configuration.oscillator_b.wave_type = sawtooth;
+$configuration.oscillator_b.frequency = 261.63;
+$configuration.oscillator_b.osc_to_modulate = oscillator_a;
+
+usize $synth_sample_size = 44100;
+
+
+invoke generate_synth($synth_sample_size, $volume, $configuration);
+invoke save("synth_output.wav");
