@@ -11,5 +11,5 @@ $configuration.oscillator_b.frequency = 261.63;
 $configuration.oscillator_b.osc_to_modulate = oscillator_a;
 $synth_sample_size = 44100;
 $volume = 0.5;
-invoke generate_synth($synth_sample_size, $volume, $configuration);
-invoke save("synth_output.wav");
+invoke generate_synth
+invoke save "synth_output.wav";

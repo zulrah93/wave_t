@@ -447,6 +447,12 @@ int main(int arguments_size, char **arguments) {
   } else {
     std::cout << "Drum machine demo broke :(" << std::endl;
   }
+
+  std::cout << "Live coding script demo WIP..." << std::endl;
+
+  wave_file_t live_coded_wav;
+  live_coded_wav.generate_from_music_live_coding_script("../scripts/hello_world.mlc");
+
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;

@@ -733,9 +733,38 @@ public:
       if (script_stream.is_open()) {
           std::string current_line;
           synth_config_t configuration{};
+          double volume{0.0};
           while(std::getline(script_stream, current_line, ';')) {
               if (current_line.empty()) {
                   continue;
+              }
+              std::cout << "current_line=" << current_line << std::endl;
+              std::remove(current_line.begin(), current_line.end(), '\r');
+              std::remove(current_line.begin(), current_line.end(), '\n');
+              if (current_line.starts_with("$")) {
+                 std::string variable_name;
+                 std::string variable_value_tokens;
+                 for(size_t index = 0; index < current_line.size(); index++) {
+                    const char& current_char = current_line[index];
+                    auto equal_it = std::find(current_line.begin(), current_line.end(), '=');
+                    if (equal_it != current_line.end()) {
+                          variable_value_tokens.assign(equal_it+1, current_line.end());
+                    }
+                    if ('.' == current_char) {
+                        break;
+                    }
+                    if (' ' == current_char) { 
+                        break;
+                    }
+                    variable_name += current_char;
+                 }
+                 
+                std::cout << "variable_name=" << variable_name << std::endl;
+                std::cout << "variable_value_tokens=" << variable_value_tokens << std::endl; 
+                
+              }
+              else {
+                  std::cout << "no $" << std::endl;
               }
           }
           return true;
