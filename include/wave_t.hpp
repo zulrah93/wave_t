@@ -740,7 +740,6 @@ public:
               if (current_line.empty()) {
                   continue;
               }
-              std::cout << "current_line=" << current_line << std::endl;
               if (current_line.starts_with("$") 
                     || current_line.starts_with("\n$") 
                     || current_line.starts_with("\r\n$")  || current_line.starts_with("\r$")) {
@@ -754,7 +753,6 @@ public:
                       }
                  }
                  if (equal_index != -1) {
-                          std::cout << "equal_index=" << equal_index << std::endl;
                           for(size_t index = (equal_index+1); index < current_line.size(); index++) {
                             const char& current_char = current_line[index];
                             if (current_char != '\n' != current_char != '\r' && current_char != ' ' && current_char != '"' && current_char != '\'')  {
@@ -762,6 +760,7 @@ public:
                             }
                           }
                  }
+
                  for(size_t index = 0; index < current_line.size(); index++) {
                     const char current_char = current_line[index];
                     if (' ' == current_char) { 
@@ -772,9 +771,6 @@ public:
                     }
                     variable_name += current_char;
                  }
-                 
-                std::cout << "variable_name=" << variable_name << std::endl;
-                std::cout << "variable_value_tokens=" << variable_value_tokens << std::endl; 
 
                 if ("$configuration.oscillator_a.operator_type" == variable_name) {
                     configuration.oscillator_a.operator_type = carrier;
@@ -783,8 +779,6 @@ public:
                 if ("$configuration.oscillator_a.wave_type" == variable_name) {
                   configuration.oscillator_a.wave_type = wave_table;
                 }
-
-                
 
                 if ("$configuration.oscillator_a.wave_table_config.wave_table_path" == variable_name) {
                     configuration.oscillator_a.wave_table_config.wave_table_path = "../wave_tables/stereo_wave_table.wav";
@@ -826,7 +820,6 @@ public:
                 }
 
                 if ("$volume" == variable_name) {
-                    std::cout << "Found $volume with value " << variable_value_tokens << std::endl;
                     double temp_volume{};
                     try {
                        temp_volume = std::stod(variable_value_tokens.c_str());
@@ -846,23 +839,23 @@ public:
                 }
 
                 if ("$bits_per_sample" == variable_name) {
-                    m_header.bits_per_sample = std::stoul(variable_value_tokens);
+                    set_bits_per_sample(std::stoul(variable_value_tokens));
                 }
 
                 if ("$number_of_channels" == variable_name) {
-                    m_header.number_of_channels = std::stoul(variable_value_tokens);
+                    set_number_of_channels(std::stoul(variable_value_tokens));
                 }
 
-              }
-             
+              }   
           }
-          std::cout << "Configuring with volume " << volume << " and sample size of " << sample_size << std::endl;
-          bool generated_sound = generate_synth(sample_size, volume, configuration);
-          if (!generated_sound) {
-              std::cout << "Failed to generate synth from live coded script?" << std::endl;
+
+          if (!generate_synth(sample_size, volume, configuration)) {
               return false;
           }
-          return save(output_path);
+
+          bool saved_succesfully = save(output_path);
+
+          return saved_succesfully && is_wave_header_valid(&m_header);
       }
       return false;
   }
@@ -1245,7 +1238,7 @@ public:
   }
 
   bool save(const std::string &file_path) {
-    m_header.sub_chunk_2_size =
+    m_header.sub_chunk_2_size = 
         (m_samples.size() * m_header.number_of_channels *
          (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.block_align = (m_header.number_of_channels *
@@ -1253,6 +1246,7 @@ public:
     m_header.byte_rate = (m_header.sample_rate * m_header.number_of_channels *
                           (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.chunk_size = 36 + m_header.sub_chunk_2_size;
+    std::cout << "m_header.sub_chunk_2_size=" << m_header.sub_chunk_2_size << std::endl;
     switch (m_header.bits_per_sample) {
     case _8_BITS_PER_SAMPLE: {
       return save_as_8_bits(file_path);
