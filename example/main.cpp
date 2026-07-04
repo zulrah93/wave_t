@@ -451,7 +451,9 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Live coding script demo WIP..." << std::endl;
 
   wave_file_t live_coded_wav;
-  live_coded_wav.generate_from_music_live_coding_script("../scripts/hello_world.mlc");
+  if (!live_coded_wav.generate_from_music_live_coding_script("../scripts/hello_world.mlc")) {
+        std::cout << "Failed to generate audio from script!" << std::endl;
+  }
 
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"

@@ -732,42 +732,137 @@ public:
       std::ifstream script_stream(script_path); 
       if (script_stream.is_open()) {
           std::string current_line;
+          std::string output_path;
           synth_config_t configuration{};
           double volume{0.0};
+          uint32_t sample_size{};
           while(std::getline(script_stream, current_line, ';')) {
               if (current_line.empty()) {
                   continue;
               }
               std::cout << "current_line=" << current_line << std::endl;
-              std::remove(current_line.begin(), current_line.end(), '\r');
-              std::remove(current_line.begin(), current_line.end(), '\n');
-              if (current_line.starts_with("$")) {
+              if (current_line.starts_with("$") 
+                    || current_line.starts_with("\n$") 
+                    || current_line.starts_with("\r\n$")  || current_line.starts_with("\r$")) {
                  std::string variable_name;
                  std::string variable_value_tokens;
+                 int64_t equal_index{-1};
                  for(size_t index = 0; index < current_line.size(); index++) {
-                    const char& current_char = current_line[index];
-                    auto equal_it = std::find(current_line.begin(), current_line.end(), '=');
-                    if (equal_it != current_line.end()) {
-                          variable_value_tokens.assign(equal_it+1, current_line.end());
-                    }
-                    if ('.' == current_char) {
-                        break;
-                    }
+                      if ('=' == current_line[index]) {
+                          equal_index = index;
+                          break;
+                      }
+                 }
+                 if (equal_index != -1) {
+                          std::cout << "equal_index=" << equal_index << std::endl;
+                          for(size_t index = (equal_index+1); index < current_line.size(); index++) {
+                            const char& current_char = current_line[index];
+                            if (current_char != '\n' != current_char != '\r' && current_char != ' ' && current_char != '"' && current_char != '\'')  {
+                              variable_value_tokens += current_char;
+                            }
+                          }
+                 }
+                 for(size_t index = 0; index < current_line.size(); index++) {
+                    const char current_char = current_line[index];
                     if (' ' == current_char) { 
                         break;
+                    }
+                    if ('\r' == current_char || '\n' == current_char) {
+                      continue;
                     }
                     variable_name += current_char;
                  }
                  
                 std::cout << "variable_name=" << variable_name << std::endl;
                 std::cout << "variable_value_tokens=" << variable_value_tokens << std::endl; 
+
+                if ("$configuration.oscillator_a.operator_type" == variable_name) {
+                    configuration.oscillator_a.operator_type = carrier;
+                }
+
+                if ("$configuration.oscillator_a.wave_type" == variable_name) {
+                  configuration.oscillator_a.wave_type = wave_table;
+                }
+
                 
+
+                if ("$configuration.oscillator_a.wave_table_config.wave_table_path" == variable_name) {
+                    configuration.oscillator_a.wave_table_config.wave_table_path = "../wave_tables/stereo_wave_table.wav";
+                }
+
+                if ("$configuration.oscillator_a.osc_to_modulate" == variable_name) {
+                    configuration.oscillator_a.osc_to_modulate = none_selected;
+                }
+
+                if ("$configuration.oscillator_a.initial_phase_offset" == variable_name) {
+                    configuration.oscillator_a.initial_phase_offset = 0.0;
+                }
+
+                if ("$configuration.oscillator_a.wave_table_config.index" == variable_name) {
+                   configuration.oscillator_a.wave_table_config.index = 140;
+                }
+
+                if ("$configuration.oscillator_a.wave_table_config.length" == variable_name) {
+                    configuration.oscillator_a.wave_table_config.length = 11025;
+                }
+
+                 if ("$configuration.oscillator_b.operator_type" == variable_name) {
+                    configuration.oscillator_a.operator_type = carrier;
+                }
+
+                if ("$configuration.oscillator_b.wave_type" == variable_name) {
+                  configuration.oscillator_b.wave_type = sawtooth;
+                }
+                if ("$configuration.oscillator_b.frequency" == variable_name) {
+                  configuration.oscillator_b.frequency = 261.63;
+                }
+
+                if ("$configuration.oscillator_b.osc_to_modulate" == variable_name) {
+                    configuration.oscillator_b.osc_to_modulate = oscillator_a;
+                }
+
+                if ("$output_path" == variable_name) {
+                     output_path = variable_value_tokens.c_str();
+                }
+
+                if ("$volume" == variable_name) {
+                    std::cout << "Found $volume with value " << variable_value_tokens << std::endl;
+                    double temp_volume{};
+                    try {
+                       temp_volume = std::stod(variable_value_tokens.c_str());
+                    }
+                    catch (...) {
+                        return false;
+                    }
+                    volume = temp_volume;
+                }
+                
+                if ("$sample_size" == variable_name) {
+                    sample_size = std::stoul(variable_value_tokens);
+                }
+                
+                if ("$sample_rate" == variable_name) {
+                   set_sample_rate(std::stoul(variable_value_tokens)); 
+                }
+
+                if ("$bits_per_sample" == variable_name) {
+                    m_header.bits_per_sample = std::stoul(variable_value_tokens);
+                }
+
+                if ("$number_of_channels" == variable_name) {
+                    m_header.number_of_channels = std::stoul(variable_value_tokens);
+                }
+
               }
-              else {
-                  std::cout << "no $" << std::endl;
-              }
+             
           }
-          return true;
+          std::cout << "Configuring with volume " << volume << " and sample size of " << sample_size << std::endl;
+          bool generated_sound = generate_synth(sample_size, volume, configuration);
+          if (!generated_sound) {
+              std::cout << "Failed to generate synth from live coded script?" << std::endl;
+              return false;
+          }
+          return save(output_path);
       }
       return false;
   }
