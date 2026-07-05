@@ -272,6 +272,32 @@ enum oscillator_selection_t : uint8_t {
   oscillator_g = 7
 };
 
+oscillator_selection_t string_to_oscillator_selection_t(const std::string& enum_name) {
+    if ("oscillator_a" == enum_name) {
+        return oscillator_selection_t::oscillator_a;
+    }
+    if ("oscillator_b" == enum_name) {
+        return oscillator_selection_t::oscillator_b;
+    }
+    if ("oscillator_c" == enum_name) {
+        return oscillator_selection_t::oscillator_c;
+    }
+    if ("oscillator_d" == enum_name) {
+        return oscillator_selection_t::oscillator_d;
+    }
+    if ("oscillator_e" == enum_name) {
+        return oscillator_selection_t::oscillator_e;
+    }
+    if ("oscillator_f" == enum_name) {
+        return oscillator_selection_t::oscillator_f;
+    }
+    if ("oscillator_g" == enum_name) {
+        return oscillator_selection_t::oscillator_g;
+    }
+    return oscillator_selection_t::none_selected;
+}
+
+
 enum oscillator_type_t : uint8_t {
   empty = 0,
   carrier = 1,
@@ -779,6 +805,11 @@ public:
               if (current_line.empty()) {
                   continue;
               }
+              if (current_line.starts_with("#") 
+                    || current_line.starts_with("\n#") 
+                    || current_line.starts_with("\r\n#")  || current_line.starts_with("\r#")) {
+                      continue; // Ignore comments
+              }
               if (current_line.starts_with("$") 
                     || current_line.starts_with("\n$") 
                     || current_line.starts_with("\r\n$")  || current_line.starts_with("\r$")) {
@@ -824,34 +855,71 @@ public:
                 }
 
                 if ("$configuration.oscillator_a.osc_to_modulate" == variable_name) {
-                    configuration.oscillator_a.osc_to_modulate = none_selected;
+                    configuration.oscillator_a.osc_to_modulate = string_to_oscillator_selection_t(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.initial_phase_offset" == variable_name) {
-                    configuration.oscillator_a.initial_phase_offset = 0.0;
+                    configuration.oscillator_a.initial_phase_offset = std::stod(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.index" == variable_name) {
-                   configuration.oscillator_a.wave_table_config.index = 140;
+                   configuration.oscillator_a.wave_table_config.index = std::stoull(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.length" == variable_name) {
-                    configuration.oscillator_a.wave_table_config.length = 11025;
+                    configuration.oscillator_a.wave_table_config.length = std::stoull(variable_value_tokens.c_str());
                 }
 
-                 if ("$configuration.oscillator_b.operator_type" == variable_name) {
-                    configuration.oscillator_a.operator_type = carrier;
+                if ("$configuration.oscillator_b.operator_type" == variable_name) {
+                    configuration.oscillator_a.operator_type = string_to_oscillator_type_t(variable_value_tokens);
+                }
+
+                if ("$configuration.oscillator_a.wave_table_config.slices" == variable_name) {
+                    std::stringstream ss{variable_value_tokens};
+                    std::vector<std::string> tokens;
+                    std::string current_line;
+                    while (std::getline(ss,  current_line, ',')) {
+                      std::stringstream line_ss{current_line};
+                      std::string current_value;
+                      while(std::getline(line_ss, current_value, ':')) {
+                        std::string token{current_value};
+                        std::remove(token.begin(), token.end(), ' ');
+                        std::remove(token.begin(), token.end(), '\r');
+                        std::remove(token.begin(), token.end(), '\n');
+                        std::cout << "token=" << token << std::endl;
+                        tokens.push_back(token);
+                      }
+                    }
+
+                    if (tokens.size() > 1 && (tokens.size() % 2) == 0) {
+                        for(size_t index = 0; index < tokens.size(); index += 2) {
+                          size_t slice_index =  std::stoull(tokens[index]);
+                          size_t length = std::stoull(tokens[index+1]);
+                          configuration.oscillator_a.wave_table_config.slices.push_back({slice_index, length});
+                        }
+                    }
+                    else {
+                      return false;
+                    }
                 }
 
                 if ("$configuration.oscillator_b.wave_type" == variable_name) {
-                  configuration.oscillator_b.wave_type = sawtooth;
+                  configuration.oscillator_b.wave_type = string_to_oscillator_selection_t(variable_value_tokens);
                 }
                 if ("$configuration.oscillator_b.frequency" == variable_name) {
-                  configuration.oscillator_b.frequency = 261.63;
+                  configuration.oscillator_b.frequency = std::stod(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_b.osc_to_modulate" == variable_name) {
-                    configuration.oscillator_b.osc_to_modulate = oscillator_a;
+                    configuration.oscillator_b.osc_to_modulate = string_to_oscillator_selection_t(variable_value_tokens);
+                }
+
+                if ("$configuration.oscillator_b.wave_table_config.index" == variable_name) {
+                   configuration.oscillator_b.wave_table_config.index = std::stoull(variable_value_tokens.c_str());
+                }
+
+                if ("$configuration.oscillator_b.wave_table_config.length" == variable_name) {
+                    configuration.oscillator_b.wave_table_config.length = std::stoull(variable_value_tokens.c_str());
                 }
 
                 if ("$output_path" == variable_name) {
