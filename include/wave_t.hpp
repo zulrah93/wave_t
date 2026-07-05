@@ -1246,7 +1246,6 @@ public:
     m_header.byte_rate = (m_header.sample_rate * m_header.number_of_channels *
                           (m_header.bits_per_sample / BITS_PER_BYTE));
     m_header.chunk_size = 36 + m_header.sub_chunk_2_size;
-    std::cout << "m_header.sub_chunk_2_size=" << m_header.sub_chunk_2_size << std::endl;
     switch (m_header.bits_per_sample) {
     case _8_BITS_PER_SAMPLE: {
       return save_as_8_bits(file_path);
