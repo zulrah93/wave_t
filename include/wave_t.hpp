@@ -781,7 +781,8 @@ public:
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.wave_table_path" == variable_name) {
-                    configuration.oscillator_a.wave_table_config.wave_table_path = "../wave_tables/stereo_wave_table.wav";
+                    std::cout << "variable_value_tokens=\"" << variable_value_tokens << "\"" << std::endl;
+                    configuration.oscillator_a.wave_table_config.wave_table_path = variable_value_tokens.c_str();
                 }
 
                 if ("$configuration.oscillator_a.osc_to_modulate" == variable_name) {
