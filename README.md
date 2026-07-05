@@ -179,7 +179,7 @@ The library also generates windows bitmaps of the waveforms (simple image format
 <img width="1903" height="84" alt="image" src="https://github.com/zulrah93/wave_t/raw/refs/heads/master/generated_waveforms/d%235_trumpet.bmp" />
 
 
-# Example of Ring Modulation (Work in Progress)
+# Example of Ring Modulation
 
 ```
   wave_file_t synth_output;
@@ -244,6 +244,44 @@ The library also generates windows bitmaps of the waveforms (simple image format
 
   ```
 
+  # Example of live code script 
+
+
+  ## Script example
+
+```
+
+$configuration.oscillator_a.operator_type = carrier;
+$configuration.oscillator_a.wave_type = wave_table;
+$configuration.oscillator_a.wave_table_config.wave_table_path = ../wave_tables/stereo_wave_table.wav;
+$configuration.oscillator_a.osc_to_modulate = none_selected;
+$configuration.oscillator_a.initial_phase_offset = 0.0;
+#$configuration.oscillator_a.wave_table_config.index = 140;
+#$configuration.oscillator_a.wave_table_config.length = 11025;
+$configuration.oscillator_a.wave_table_config.slices = 140:11025, 0:10, 44100:44100;
+$configuration.oscillator_b.operator_type = carrier;
+$configuration.oscillator_b.wave_type = sawtooth;
+$configuration.oscillator_b.frequency = 261.63;
+$configuration.oscillator_b.osc_to_modulate = oscillator_a;
+$sample_rate = 44100;
+$sample_size = 44100;
+$bits_per_sample = 32;
+$number_of_channels = 1;
+$volume = 0.5;
+$output_path = live_coded_output.wav;
+
+```
+
+
+  ## C++ Library Example
+
+```
+wave_file_t live_coded_wav;
+  if (!live_coded_wav.generate_from_music_live_coding_script("hello_world.mlc")) {
+        std::cout << "Failed to generate audio from script!" << std::endl;
+  }
+
+```
 
 
 
