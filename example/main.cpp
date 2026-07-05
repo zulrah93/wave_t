@@ -455,6 +455,14 @@ int main(int arguments_size, char **arguments) {
         std::cout << "Failed to generate audio from script!" << std::endl;
   }
 
+  if(live_coded_wav.save_waveform_as_monochrome_bmp("live_coded_audio.bmp", scale_down_image, shade_waveform, print_text,
+            pc_screenfont_file_path, "live_coded_audio.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+  } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
+  }
+
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
