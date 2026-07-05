@@ -78,9 +78,28 @@ enum wave_type_t : uint8_t {
   triangle = 2,
   square = 4,
   sawtooth = 8,
-  wave_table =
-      9, // Read more here https://en.wikipedia.org/wiki/Wavetable_synthesis
+  wave_table = 9, // Read more here https://en.wikipedia.org/wiki/Wavetable_synthesis
 };
+
+
+wave_type_t string_to_wave_type_t(const std::string& enum_name) {
+  if ("wave_table" == enum_name) {
+      return wave_type_t::wave_table;
+  }
+  if ("sawtooth" == enum_name) {
+      return wave_type_t::sawtooth;
+  }
+  if ("square" == enum_name) {
+      return wave_type_t::square;
+  }
+  if ("triangle" == enum_name) {
+      return wave_type_t::triangle;
+  }
+  if ("sine" == enum_name) {
+      return wave_type_t::sine;
+  }
+  return wave_type_t::linear;
+}
 
 // Provides functions that generate signals and dft and invesre dft function
 namespace helper {
@@ -262,8 +281,28 @@ enum oscillator_type_t : uint8_t {
   ring_modulation = 5
 };
 
+oscillator_type_t string_to_oscillator_type_t(const std::string& enum_name) {
+      
+      if ("carrier" == enum_name) {
+          return oscillator_type_t::carrier;
+      }
+      if ("frequency_modulation" == enum_name) {
+          return oscillator_type_t::frequency_modulation;
+      }
+      if ("phase_modulation" == enum_name) {
+          return oscillator_type_t::phase_modulation;
+      }
+      if ("amplitude_modulation" == enum_name) {
+          return oscillator_type_t::amplitude_modulation;
+      }
+      if ("ring_modulation" == enum_name) {
+          return oscillator_type_t::ring_modulation;
+      }
+      return oscillator_type_t::empty;
+}
+
 struct wave_table_config_t {
-  const char *wave_table_path;
+  std::string wave_table_path;
   size_t index;
   size_t length;
   std::vector<std::pair<size_t, size_t>> slices;
@@ -773,16 +812,15 @@ public:
                  }
 
                 if ("$configuration.oscillator_a.operator_type" == variable_name) {
-                    configuration.oscillator_a.operator_type = carrier;
+                    configuration.oscillator_a.operator_type = string_to_oscillator_type_t(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.wave_type" == variable_name) {
-                  configuration.oscillator_a.wave_type = wave_table;
+                  configuration.oscillator_a.wave_type = string_to_wave_type_t(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.wave_table_path" == variable_name) {
-                    std::cout << "variable_value_tokens=\"" << variable_value_tokens << "\"" << std::endl;
-                    configuration.oscillator_a.wave_table_config.wave_table_path = variable_value_tokens.c_str();
+                    configuration.oscillator_a.wave_table_config.wave_table_path = std::string(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.osc_to_modulate" == variable_name) {
@@ -2161,10 +2199,10 @@ std::vector<int32_t> oscillator_processing_callback(
   double time{};
 
   wave_table_t *loaded_wave_table{nullptr};
-  if (nullptr != primary_osc->wave_table_config.wave_table_path &&
+  if (!primary_osc->wave_table_config.wave_table_path.empty() &&
       primary_osc->wave_table_config.length > 0) {
     loaded_wave_table = new wave_table_t(primary_osc->wave_table_config);
-  } else if (nullptr != primary_osc->wave_table_config.wave_table_path &&
+  } else if (!primary_osc->wave_table_config.wave_table_path.empty() &&
              !primary_osc->wave_table_config.slices.empty()) {
     loaded_wave_table =
         new wave_table_t(primary_osc->wave_table_config.wave_table_path,
