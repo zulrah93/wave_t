@@ -283,5 +283,9 @@ wave_file_t live_coded_wav;
 
 ```
 
+## Waveform Generated
+
+<img width="2048" height="128" alt="image" src="https://github.com/user-attachments/assets/52f96d5a-f8e8-422d-8755-1da5b28373c9" />
+
 
 
