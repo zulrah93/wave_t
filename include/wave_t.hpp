@@ -886,7 +886,6 @@ public:
                         std::remove(token.begin(), token.end(), ' ');
                         std::remove(token.begin(), token.end(), '\r');
                         std::remove(token.begin(), token.end(), '\n');
-                        std::cout << "token=" << token << std::endl;
                         tokens.push_back(token);
                       }
                     }
