@@ -249,7 +249,7 @@ int main(int arguments_size, char **arguments) {
   configuration.bitcrusher_wet_percentage = 1.0;
   configuration.bitcrusher_gain_value = 1.0;
   configuration.lfo.effect_to_modulate =
-      effects_type_t::bitcrusher_wet_percentage;
+      lfo_effects_type_t::bitcrusher_wet_percentage;
   configuration.lfo.frequency = 20.0;
   configuration.lfo.wave_type = wave_type_t::linear;
 
@@ -272,7 +272,42 @@ int main(int arguments_size, char **arguments) {
         << "Invalid synth configuration or failed to generate synth -- sorry."
         << std::endl;
   }
+#elif defined (COMB_FILTER_DEMO)
+  std::cout << "Generating a combfiltered sawtooth at C4 frequency..." << std::endl;
+  configuration.apply_combfilter = false;
+  configuration.combfilter_distance = 40;
+    configuration.oscillator_a.operator_type = carrier;
+  configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
+  configuration.oscillator_a.frequency =
+      C4_FREQUENCY;
+  configuration.oscillator_a.osc_to_modulate =
+      oscillator_selection_t::none_selected;
+  
+      constexpr const double seconds{3.55};
 
+  const size_t synth_sample_size =
+      static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
+
+  constexpr const double volume{0.5};
+  if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
+    std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
+              << " dBFS is the peak of this generated wave table synth sound!!"
+              << std::endl;
+
+    if (!synth_output.save_waveform_as_monochrome_bmp(
+            "wave_table_synth.bmp", scale_down_image, shade_waveform,
+            print_text, pc_screenfont_file_path, "wave_table_synth.bmp")) {
+      std::cout << "Failed to save generated monochrome bitmap of wav file!"
+                << std::endl;
+    } else {
+      std::cout << "Checkout the groovy waveform visually!" << std::endl;
+    }
+    synth_output.save("synth_output.wav");
+  } else {
+    std::cout
+        << "Invalid synth configuration or failed to generate synth -- sorry."
+        << std::endl;
+  }
 #elif defined(WAVE_TABLE_DEMO)
   configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
@@ -386,7 +421,7 @@ int main(int arguments_size, char **arguments) {
   configuration.bitcrusher_wet_percentage = 1.0;
   configuration.bitcrusher_gain_value = 1.0;
   configuration.lfo.effect_to_modulate =
-      effects_type_t::bitcrusher_wet_percentage;
+      lfo_effects_type_t::bitcrusher_wet_percentage;
   configuration.lfo.frequency = E4_FREQUENCY;
   configuration.lfo.wave_type = wave_type_t::sawtooth;
 

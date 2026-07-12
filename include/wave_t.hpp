@@ -346,7 +346,7 @@ struct oscillator_config_t {
   wave_table_config_t wave_table_config;
 };
 
-enum effects_type_t : uint8_t {
+enum lfo_effects_type_t : uint8_t {
   bitcrusher_wet_percentage = 0,
   bitcrusher_gain_value = 1
 };
@@ -355,7 +355,7 @@ struct lfo_config_t {
   double frequency; // Should be low frequency but we won't cap it the value so
                     // you could make it a hfo if that exists :)
   wave_type_t wave_type;
-  effects_type_t effect_to_modulate;
+  lfo_effects_type_t effect_to_modulate;
 };
 
 struct synth_config_t {
@@ -370,6 +370,8 @@ struct synth_config_t {
   bool apply_bitcrusher_effect;
   double bitcrusher_gain_value;
   double bitcrusher_wet_percentage;
+  bool apply_combfilter;
+  size_t combfilter_distance;
   bool empty(void) const {
     return oscillator_a.operator_type == oscillator_type_t::empty &&
            oscillator_b.operator_type == oscillator_type_t::empty &&
@@ -846,32 +848,56 @@ public:
                     configuration.oscillator_a.operator_type = string_to_oscillator_type_t(variable_value_tokens);
                 }
 
+                if ("$configuration.oscillator_b.operator_type" == variable_name) {
+                    configuration.oscillator_a.operator_type = string_to_oscillator_type_t(variable_value_tokens);
+                }
+
                 if ("$configuration.oscillator_a.wave_type" == variable_name) {
                   configuration.oscillator_a.wave_type = string_to_wave_type_t(variable_value_tokens);
+                }
+
+                if ("$configuration.oscillator_b.wave_type" == variable_name) {
+                  configuration.oscillator_b.wave_type = string_to_oscillator_selection_t(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.wave_table_path" == variable_name) {
                     configuration.oscillator_a.wave_table_config.wave_table_path = std::string(variable_value_tokens);
                 }
 
+                if ("$configuration.oscillator_b.wave_table_config.wave_table_path" == variable_name) {
+                    configuration.oscillator_b.wave_table_config.wave_table_path = std::string(variable_value_tokens);
+                }
+
                 if ("$configuration.oscillator_a.osc_to_modulate" == variable_name) {
                     configuration.oscillator_a.osc_to_modulate = string_to_oscillator_selection_t(variable_value_tokens);
+                }
+
+                if ("$configuration.oscillator_b.osc_to_modulate" == variable_name) {
+                    configuration.oscillator_b.osc_to_modulate = string_to_oscillator_selection_t(variable_value_tokens);
                 }
 
                 if ("$configuration.oscillator_a.initial_phase_offset" == variable_name) {
                     configuration.oscillator_a.initial_phase_offset = std::stod(variable_value_tokens.c_str());
                 }
 
+                 if ("$configuration.oscillator_b.initial_phase_offset" == variable_name) {
+                    configuration.oscillator_b.initial_phase_offset = std::stod(variable_value_tokens.c_str());
+                }
+
                 if ("$configuration.oscillator_a.wave_table_config.index" == variable_name) {
                    configuration.oscillator_a.wave_table_config.index = std::stoull(variable_value_tokens.c_str());
+                }
+                
+                if ("$configuration.oscillator_b.wave_table_config.index" == variable_name) {
+                   configuration.oscillator_b.wave_table_config.index = std::stoull(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.length" == variable_name) {
                     configuration.oscillator_a.wave_table_config.length = std::stoull(variable_value_tokens.c_str());
                 }
 
-                if ("$configuration.oscillator_b.operator_type" == variable_name) {
-                    configuration.oscillator_a.operator_type = string_to_oscillator_type_t(variable_value_tokens);
+                if ("$configuration.oscillator_b.wave_table_config.length" == variable_name) {
+                    configuration.oscillator_b.wave_table_config.length = std::stoull(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_a.wave_table_config.slices" == variable_name) {
@@ -901,16 +927,17 @@ public:
                       return false;
                     }
                 }
-
-                if ("$configuration.oscillator_b.wave_type" == variable_name) {
-                  configuration.oscillator_b.wave_type = string_to_oscillator_selection_t(variable_value_tokens);
-                }
-                if ("$configuration.oscillator_b.frequency" == variable_name) {
-                  configuration.oscillator_b.frequency = std::stod(variable_value_tokens.c_str());
+                
+                if ("$configuration.oscillator_a.frequency" == variable_name) {
+                  configuration.oscillator_a.frequency = std::stod(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_b.osc_to_modulate" == variable_name) {
                     configuration.oscillator_b.osc_to_modulate = string_to_oscillator_selection_t(variable_value_tokens);
+                }
+
+                if ("$configuration.oscillator_a.wave_table_config.index" == variable_name) {
+                   configuration.oscillator_a.wave_table_config.index = std::stoull(variable_value_tokens.c_str());
                 }
 
                 if ("$configuration.oscillator_b.wave_table_config.index" == variable_name) {
@@ -1118,12 +1145,12 @@ public:
 
     if (m_apply_bitcrusher_effect) {
       const auto &lfo = configuration.lfo;
-      if (effects_type_t::bitcrusher_wet_percentage == lfo.effect_to_modulate) {
+      if (lfo_effects_type_t::bitcrusher_wet_percentage == lfo.effect_to_modulate) {
         const double &frequency = lfo.frequency;
         const wave_type_t &wave_type = lfo.wave_type;
         const bool is_lfo = frequency <= 20.0; // 20hz or less is considered lfo
         apply_osc_to_bitcrusher_wet_value(frequency, wave_type, is_lfo);
-      } else if (effects_type_t::bitcrusher_gain_value ==
+      } else if (lfo_effects_type_t::bitcrusher_gain_value ==
                  lfo.effect_to_modulate) {
         const double &frequency = lfo.frequency;
         const wave_type_t &wave_type = lfo.wave_type;
@@ -2186,6 +2213,25 @@ public:
     return sample;
   }
 
+  int32_t next_mono_combfiltered_sample() {
+    if (!m_slices_as_linear_vector.empty()) {
+
+      int32_t sample = m_slices_as_linear_vector[m_internal_index] + (m_slices_as_linear_vector[(m_internal_index + 1) % m_slices_as_linear_vector.size()] / 2);
+      m_internal_index += m_wave_table_sample.get_header().number_of_channels;
+      m_internal_index %= m_slices_as_linear_vector.size();
+      return sample;
+    }
+
+    int32_t sample = m_wave_table_sample[m_internal_index].value()
+                                  + (m_wave_table_sample[(m_internal_index + 1) % m_wave_table_sample.sample_size()].value() / 2);
+
+    m_internal_index += m_wave_table_sample.get_header().number_of_channels;
+    m_internal_index %= (m_wave_table_index +
+                         (m_wave_table_length *
+                          m_wave_table_sample.get_header().number_of_channels));
+    return sample;
+  }
+
 private:
   int32_t next_sample() { // Unsafe if no bool operator check is called
     if (!m_slices_as_linear_vector.empty()) {
@@ -2352,6 +2398,12 @@ std::vector<int32_t> oscillator_processing_callback(
       sample +=
           helper::pcm_sine(primary_osc->frequency + frequency_offset, time,
                            volume + amplitude_offset, phase + phase_offset);
+      if (configuration.apply_combfilter) {
+         sample +=
+          (helper::pcm_sine(primary_osc->frequency + frequency_offset, time + (static_cast<double>(configuration.combfilter_distance) + (1.0 / static_cast<double>(sample_rate))),
+                           (volume * 0.5) + amplitude_offset, phase + phase_offset));
+      }
+                          
     }
     if ((wave_type & wave_type_t::triangle)) {
       sample += helper::pcm_triangle(time, volume + amplitude_offset,
@@ -2365,12 +2417,18 @@ std::vector<int32_t> oscillator_processing_callback(
       sample +=
           helper::pcm_saw_tooth(time, volume + amplitude_offset,
                                 primary_osc->frequency + frequency_offset);
+      if (configuration.apply_combfilter) {
+        sample +=
+          (helper::pcm_saw_tooth(time  + (static_cast<double>(configuration.combfilter_distance) + ((1.0 / static_cast<double>(sample_rate)))), (volume * 0.5) + amplitude_offset,
+                                primary_osc->frequency + frequency_offset));
+      }
     }
 
     if ((wave_type & wave_type_t::wave_table) &&
         (loaded_wave_table &&
          loaded_wave_table->has_wave_table_loaded_succesfully())) {
-      sample += loaded_wave_table->next_mono_sample();
+        
+      sample += configuration.apply_combfilter ? loaded_wave_table->next_mono_combfiltered_sample() : loaded_wave_table->next_mono_sample();
     }
 
     // Ring modulation we will multiply the carrier signal with the modulating
