@@ -2400,7 +2400,7 @@ std::vector<int32_t> oscillator_processing_callback(
                            volume + amplitude_offset, phase + phase_offset);
       if (configuration.apply_combfilter) {
          sample +=
-          (helper::pcm_sine(primary_osc->frequency + frequency_offset, time + (static_cast<double>(configuration.combfilter_distance) + (1.0 / static_cast<double>(sample_rate))),
+          (helper::pcm_sine(primary_osc->frequency + frequency_offset, time + (static_cast<double>(configuration.combfilter_distance) * (1.0 / static_cast<double>(sample_rate))),
                            (volume * 0.5) + amplitude_offset, phase + phase_offset));
       }
                           
@@ -2419,7 +2419,7 @@ std::vector<int32_t> oscillator_processing_callback(
                                 primary_osc->frequency + frequency_offset);
       if (configuration.apply_combfilter) {
         sample +=
-          (helper::pcm_saw_tooth(time  + (static_cast<double>(configuration.combfilter_distance) + ((1.0 / static_cast<double>(sample_rate)))), (volume * 0.5) + amplitude_offset,
+          (helper::pcm_saw_tooth(time  + (static_cast<double>(configuration.combfilter_distance) * ((1.0 / static_cast<double>(sample_rate)))), (volume * 0.5) + amplitude_offset,
                                 primary_osc->frequency + frequency_offset));
       }
     }

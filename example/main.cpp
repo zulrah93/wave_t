@@ -274,8 +274,8 @@ int main(int arguments_size, char **arguments) {
   }
 #elif defined (COMB_FILTER_DEMO)
   std::cout << "Generating a combfiltered sawtooth at C4 frequency..." << std::endl;
-  configuration.apply_combfilter = false;
-  configuration.combfilter_distance = 40;
+  configuration.apply_combfilter = true;
+  configuration.combfilter_distance = sample_rate;
     configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency =
