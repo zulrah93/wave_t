@@ -259,6 +259,11 @@ get_decibel_fullscale_from_sample(const int64_t sample,
   return dbfs;
 }
 
+//Source: https://en.wikipedia.org/wiki/MIDI_tuning_standard
+double frequency_to_midi_note_id(int32_t midi_note_id) { // We are gonna match the same type used in Steinberg's VST
+    return 440.0 * pow(2.0, (midi_note_id - 69) / 12.0);
+}
+
 } // namespace helper
 
 enum oscillator_selection_t : uint8_t {

@@ -498,6 +498,11 @@ int main(int arguments_size, char **arguments) {
       std::cout << "Checkout the groovy waveform visually!" << std::endl;
   }
 
+  for (int32_t midi_note_id = 0; midi_note_id <= 127; midi_note_id++) {
+    std::cout << "Midi Note ID " << midi_note_id 
+                << " has a Frequency of " << helper::frequency_to_midi_note_id(midi_note_id) << std::endl;
+  }
+
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
       << std::endl;
