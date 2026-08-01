@@ -30,7 +30,7 @@
 #include <wave_t.hpp>
 
 constexpr double C4_FREQUENCY{261.626};
-constexpr double A4_FREQUENCY{440.000};
+//constexpr double A4_FREQUENCY{440.000};
 constexpr double D5_FREQUENCY{622.25};
 
 double detune(double x) {
@@ -77,7 +77,7 @@ int main(int arguments_size, char **arguments) {
       sample_rate * 60 * 5; // 5 minutes of 16-bit PCM sample
   // This helper member function can generate one or a combination of waves only
   // supports mono or stereo for now
-  output.generate_wave(wave_type_t::sine, sample_size, A4_FREQUENCY, 0.6);
+  output.generate_wave(wave_type_t::sine, sample_size, helper::midi_note_id_to_frequency(69), 0.6); // Midi note id 69 is A4
   if (!output.save("output.wav")) {
     std::cout << "Failed to save 16-bit generated wav file" << std::endl;
   }
@@ -329,7 +329,7 @@ int main(int arguments_size, char **arguments) {
 
   configuration.oscillator_b.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_b.wave_type = wave_type_t::sawtooth;
-  configuration.oscillator_b.frequency = C4_FREQUENCY;
+  configuration.oscillator_b.frequency = helper::midi_note_id_to_frequency(69); // 69 is A4
   configuration.oscillator_b.osc_to_modulate =
       oscillator_selection_t::oscillator_a;
 
@@ -500,7 +500,7 @@ int main(int arguments_size, char **arguments) {
 
   for (int32_t midi_note_id = 0; midi_note_id <= 127; midi_note_id++) {
     std::cout << "Midi Note ID " << midi_note_id 
-                << " has a Frequency of " << helper::frequency_to_midi_note_id(midi_note_id) << std::endl;
+                << " has a Frequency of " << helper::midi_note_id_to_frequency(midi_note_id) << std::endl;
   }
 
   std::cout
