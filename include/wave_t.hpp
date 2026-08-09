@@ -2390,6 +2390,8 @@ std::vector<int32_t> oscillator_processing_callback(
     }
   }
 
+  double real_time_volume{volume};
+
   for (size_t current_frame{}; current_frame < sample_size; current_frame++) {
     int64_t sample{};
     double offset{};
@@ -2397,7 +2399,7 @@ std::vector<int32_t> oscillator_processing_callback(
     double phase_offset = primary_osc->initial_phase_offset;
     double amplitude_offset{};
     double modulation_amplitude{};
-    double real_time_volume{volume};
+
     bool ring_modulation{false};
 
     if (use_envelope) {

@@ -193,8 +193,8 @@ int main(int arguments_size, char **arguments) {
   constexpr double detune_amount = 0.0;
 
   configuration.enable_envelope = true;
-  configuration.envelope.attack_in_samples = helper::milliseconds_to_samples(sample_rate, 1500);
-  configuration.envelope.decay_in_samples = helper::milliseconds_to_samples(sample_rate, 1500);
+  configuration.envelope.attack_in_samples = helper::milliseconds_to_samples(sample_rate, 100);
+  configuration.envelope.decay_in_samples = helper::milliseconds_to_samples(sample_rate, 100);
   configuration.envelope.sustain_as_volume_percentage = 0.13;
   configuration.envelope.release_in_samples = 0;
   configuration.oscillator_a.operator_type = carrier;
