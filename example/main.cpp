@@ -309,6 +309,11 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 #elif defined(WAVE_TABLE_DEMO)
+  configuration.enable_envelope = false;
+  configuration.envelope.attack_in_samples = 44100;
+  configuration.envelope.decay_in_samples = 44100;
+  configuration.envelope.release_in_samples = 0;
+  configuration.envelope.sustain_as_volume_percentage = 0.4;
   configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
   configuration.oscillator_a.wave_table_config.wave_table_path =

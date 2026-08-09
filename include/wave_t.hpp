@@ -264,6 +264,15 @@ double midi_note_id_to_frequency(int32_t midi_note_id) { // We are gonna match t
     return 440.0 * pow(2.0, (midi_note_id - 69) / 12.0);
 }
 
+uint32_t milliseconds_to_samples(const uint32_t sample_rate, const uint16_t milliseconds) {
+  return (static_cast<uint16_t>(milliseconds) * 1000) * sample_rate;
+}
+
+uint32_t nanoseconds_to_samples(const uint32_t sample_rate, const uint16_t nanoseconds) {
+  return (static_cast<uint16_t>(nanoseconds) * 1000000000) * sample_rate;
+}
+
+
 } // namespace helper
 
 enum oscillator_selection_t : uint8_t {
@@ -363,6 +372,14 @@ struct lfo_config_t {
   lfo_effects_type_t effect_to_modulate;
 };
 
+//Source: https://en.wikipedia.org/wiki/Envelope_(music)
+struct envelope_t {
+    uint32_t attack_in_samples;
+    uint32_t decay_in_samples;
+    uint32_t release_in_samples;
+    double sustain_as_volume_percentage;
+};
+
 struct synth_config_t {
   oscillator_config_t oscillator_a;
   oscillator_config_t oscillator_b;
@@ -377,6 +394,8 @@ struct synth_config_t {
   double bitcrusher_wet_percentage;
   bool apply_combfilter;
   size_t combfilter_distance;
+  bool enable_envelope;
+  envelope_t envelope;
   bool empty(void) const {
     return oscillator_a.operator_type == oscillator_type_t::empty &&
            oscillator_b.operator_type == oscillator_type_t::empty &&
@@ -2266,7 +2285,7 @@ namespace processing_functions {
 
 std::vector<int32_t> oscillator_processing_callback(
     const oscillator_selection_t &osc_to_process, const size_t &sample_size,
-    const double &volume, const bool &is_stereo, const uint32_t &sample_rate,
+    const double& volume, const bool &is_stereo, const uint32_t &sample_rate,
     synth_config_t &configuration,
     std::initializer_list<oscillator_config_t *> selected_oscs) {
 
@@ -2315,6 +2334,42 @@ std::vector<int32_t> oscillator_processing_callback(
 
   double phase{};
   double time{};
+  bool use_envelope = configuration.enable_envelope;
+  const double peak_volume = volume;
+  double attack_volume_step{0.0};
+  double decay_volume_step{0.0};
+  const envelope_t& envelope = configuration.envelope;
+  std::vector<double> volume_over_time;
+  volume_over_time.reserve(sample_size);
+
+  if (use_envelope) {
+      attack_volume_step = (envelope.attack_in_samples == 0) 
+                ? peak_volume : (peak_volume / static_cast<double>(envelope.attack_in_samples));
+      decay_volume_step = (envelope.attack_in_samples == 0) 
+                ? envelope.sustain_as_volume_percentage : (envelope.sustain_as_volume_percentage / static_cast<double>(envelope.attack_in_samples));
+      if (envelope.attack_in_samples == 0) {
+          volume_over_time.push_back(peak_volume);
+      }
+      else {
+        for(uint32_t step = 0; step < envelope.attack_in_samples; step++) {
+            volume_over_time.push_back(static_cast<double>(step) * attack_volume_step);
+        }
+      }
+      if (envelope.decay_in_samples == 0) {
+        for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
+          volume_over_time.push_back(envelope.sustain_as_volume_percentage);
+        }
+      }
+      else {
+        for(uint32_t step = envelope.attack_in_samples; step > 0; step--) {
+            volume_over_time.push_back(static_cast<double>(step) * decay_volume_step);
+        }
+      }
+
+      for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
+          volume_over_time.push_back(envelope.sustain_as_volume_percentage);
+      }
+  }
 
   wave_table_t *loaded_wave_table{nullptr};
   if (!primary_osc->wave_table_config.wave_table_path.empty() &&
@@ -2330,14 +2385,20 @@ std::vector<int32_t> oscillator_processing_callback(
     }
   }
 
-  for (size_t _{}; _ < sample_size; _++) {
+  for (size_t current_frame{}; current_frame < sample_size; current_frame++) {
     int64_t sample{};
     double offset{};
     double frequency_offset{};
     double phase_offset = primary_osc->initial_phase_offset;
     double amplitude_offset{};
     double modulation_amplitude{};
+    double real_time_volume{volume};
     bool ring_modulation{false};
+
+    if (use_envelope) {
+      real_time_volume = volume_over_time[current_frame];
+    }
+
     for (auto &selected_osc : selected_oscs) {
 
       if (nullptr == selected_osc) {
@@ -2355,23 +2416,23 @@ std::vector<int32_t> oscillator_processing_callback(
       const double modulating_frequency = selected_osc->frequency;
 
       if ((selected_osc->wave_type & wave_type_t::sine)) {
-        offset += helper::pcm_sine(modulating_frequency, time, volume, phase);
+        offset += helper::pcm_sine(modulating_frequency, time, real_time_volume, phase);
       }
       if ((selected_osc->wave_type & wave_type_t::triangle)) {
-        offset += helper::pcm_triangle(time, volume, modulating_frequency);
+        offset += helper::pcm_triangle(time, real_time_volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::square)) {
-        offset += helper::pcm_square(time, volume, modulating_frequency);
+        offset += helper::pcm_square(time, real_time_volume, modulating_frequency);
       }
       if ((selected_osc->wave_type & wave_type_t::sawtooth)) {
-        offset += helper::pcm_saw_tooth(time, volume, modulating_frequency);
+        offset += helper::pcm_saw_tooth(time, real_time_volume, modulating_frequency);
       }
 
       if (modulation_amplitude <= 0.0) {
         modulation_amplitude = 1.0;
       }
 
-      offset /= volume;
+      offset /= real_time_volume;
       offset *= modulation_amplitude;
 
       switch (selected_osc->operator_type) {
@@ -2402,29 +2463,29 @@ std::vector<int32_t> oscillator_processing_callback(
     if ((wave_type & wave_type_t::sine)) {
       sample +=
           helper::pcm_sine(primary_osc->frequency + frequency_offset, time,
-                           volume + amplitude_offset, phase + phase_offset);
+                           real_time_volume + amplitude_offset, phase + phase_offset);
       if (configuration.apply_combfilter) {
          sample +=
           (helper::pcm_sine(primary_osc->frequency + frequency_offset, time + (static_cast<double>(configuration.combfilter_distance) * (1.0 / static_cast<double>(sample_rate))),
-                           (volume * 0.5) + amplitude_offset, phase + phase_offset));
+                           (real_time_volume * 0.5) + amplitude_offset, phase + phase_offset));
       }
                           
     }
     if ((wave_type & wave_type_t::triangle)) {
-      sample += helper::pcm_triangle(time, volume + amplitude_offset,
+      sample += helper::pcm_triangle(time, real_time_volume + amplitude_offset,
                                      primary_osc->frequency + frequency_offset);
     }
     if ((wave_type & wave_type_t::square)) {
-      sample += helper::pcm_square(time, volume + amplitude_offset,
+      sample += helper::pcm_square(time, real_time_volume + amplitude_offset,
                                    primary_osc->frequency + frequency_offset);
     }
     if ((wave_type & wave_type_t::sawtooth)) {
       sample +=
-          helper::pcm_saw_tooth(time, volume + amplitude_offset,
+          helper::pcm_saw_tooth(time, real_time_volume + amplitude_offset,
                                 primary_osc->frequency + frequency_offset);
       if (configuration.apply_combfilter) {
         sample +=
-          (helper::pcm_saw_tooth(time  + (static_cast<double>(configuration.combfilter_distance) * ((1.0 / static_cast<double>(sample_rate)))), (volume * 0.5) + amplitude_offset,
+          (helper::pcm_saw_tooth(time  + (static_cast<double>(configuration.combfilter_distance) * ((1.0 / static_cast<double>(sample_rate)))), (real_time_volume * 0.5) + amplitude_offset,
                                 primary_osc->frequency + frequency_offset));
       }
     }
