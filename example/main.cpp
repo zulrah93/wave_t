@@ -192,6 +192,11 @@ int main(int arguments_size, char **arguments) {
   // Supersaw example -- hopefully :P
   constexpr double detune_amount = 0.0;
 
+  configuration.enable_envelope = true;
+  configuration.envelope.attack_in_samples = helper::milliseconds_to_samples(sample_rate, 1500);
+  configuration.envelope.decay_in_samples = helper::milliseconds_to_samples(sample_rate, 1500);
+  configuration.envelope.sustain_as_volume_percentage = 0.13;
+  configuration.envelope.release_in_samples = 0;
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency =
@@ -240,7 +245,7 @@ int main(int arguments_size, char **arguments) {
   configuration.oscillator_g.osc_to_modulate =
       oscillator_selection_t::none_selected;
 
-  constexpr const double seconds{1.55};
+  constexpr const double seconds{3};
 
   const size_t synth_sample_size =
       static_cast<size_t>(ceil(static_cast<double>(sample_rate) * seconds));
@@ -253,7 +258,7 @@ int main(int arguments_size, char **arguments) {
   configuration.lfo.frequency = 20.0;
   configuration.lfo.wave_type = wave_type_t::linear;
 
-  constexpr const double volume{0.13};
+  constexpr const double volume{0.14};
   if (synth_output.generate_synth(synth_sample_size, volume, configuration)) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
@@ -309,11 +314,6 @@ int main(int arguments_size, char **arguments) {
         << std::endl;
   }
 #elif defined(WAVE_TABLE_DEMO)
-  configuration.enable_envelope = false;
-  configuration.envelope.attack_in_samples = 44100;
-  configuration.envelope.decay_in_samples = 44100;
-  configuration.envelope.release_in_samples = 0;
-  configuration.envelope.sustain_as_volume_percentage = 0.4;
   configuration.oscillator_a.operator_type = oscillator_type_t::carrier;
   configuration.oscillator_a.wave_type = wave_type_t::wave_table;
   configuration.oscillator_a.wave_table_config.wave_table_path =

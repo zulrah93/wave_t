@@ -265,11 +265,11 @@ double midi_note_id_to_frequency(int32_t midi_note_id) { // We are gonna match t
 }
 
 uint32_t milliseconds_to_samples(const uint32_t sample_rate, const uint16_t milliseconds) {
-  return (static_cast<uint16_t>(milliseconds) * 1000) * sample_rate;
+  return static_cast<uint32_t>((static_cast<double>(milliseconds) / 1000.0) * sample_rate);
 }
 
 uint32_t nanoseconds_to_samples(const uint32_t sample_rate, const uint16_t nanoseconds) {
-  return (static_cast<uint16_t>(nanoseconds) * 1000000000) * sample_rate;
+  return static_cast<uint32_t>((static_cast<double>(nanoseconds) / 1000000000.0) * sample_rate);
 }
 
 
@@ -2343,18 +2343,21 @@ std::vector<int32_t> oscillator_processing_callback(
   volume_over_time.reserve(sample_size);
 
   if (use_envelope) {
+      
       attack_volume_step = (envelope.attack_in_samples == 0) 
                 ? peak_volume : (peak_volume / static_cast<double>(envelope.attack_in_samples));
-      decay_volume_step = (envelope.attack_in_samples == 0) 
-                ? envelope.sustain_as_volume_percentage : (envelope.sustain_as_volume_percentage / static_cast<double>(envelope.attack_in_samples));
+      decay_volume_step = (envelope.decay_in_samples == 0) 
+                ? envelope.sustain_as_volume_percentage : (envelope.sustain_as_volume_percentage / static_cast<double>(envelope.decay_in_samples));
+      
       if (envelope.attack_in_samples == 0) {
           volume_over_time.push_back(peak_volume);
       }
       else {
         for(uint32_t step = 0; step < envelope.attack_in_samples; step++) {
-            volume_over_time.push_back(static_cast<double>(step) * attack_volume_step);
+            volume_over_time.push_back(static_cast<double>(step+1) * attack_volume_step);
         }
       }
+
       if (envelope.decay_in_samples == 0) {
         for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
           volume_over_time.push_back(envelope.sustain_as_volume_percentage);
