@@ -378,6 +378,7 @@ struct envelope_t {
     uint32_t decay_in_samples;
     uint32_t release_in_samples;
     double sustain_as_volume_percentage;
+    double sustain_as_raw;
 };
 
 struct synth_config_t {
@@ -1061,6 +1062,7 @@ public:
     const size_t max_sample_value = get_maximum_sample_value();
 
     const double volume = helper::set_volume(volume_percent, max_sample_value);
+    configuration.envelope.sustain_as_raw = helper::set_volume(configuration.envelope.sustain_as_volume_percentage, max_sample_value);
 
     const bool is_stereo = m_header.number_of_channels == 2;
 
@@ -2336,6 +2338,7 @@ std::vector<int32_t> oscillator_processing_callback(
   double time{};
   bool use_envelope = configuration.enable_envelope;
   const double peak_volume = volume;
+  const double sustain_volume = configuration.envelope.sustain_as_raw;
   double attack_volume_step{0.0};
   double decay_volume_step{0.0};
   const envelope_t& envelope = configuration.envelope;
@@ -2343,11 +2346,10 @@ std::vector<int32_t> oscillator_processing_callback(
   volume_over_time.reserve(sample_size);
 
   if (use_envelope) {
-      
       attack_volume_step = (envelope.attack_in_samples == 0) 
                 ? peak_volume : (peak_volume / static_cast<double>(envelope.attack_in_samples));
       decay_volume_step = (envelope.decay_in_samples == 0) 
-                ? envelope.sustain_as_volume_percentage : (envelope.sustain_as_volume_percentage / static_cast<double>(envelope.decay_in_samples));
+                ? sustain_volume : (sustain_volume / static_cast<double>(envelope.decay_in_samples));
       
       if (envelope.attack_in_samples == 0) {
           volume_over_time.push_back(peak_volume);
@@ -2360,7 +2362,7 @@ std::vector<int32_t> oscillator_processing_callback(
 
       if (envelope.decay_in_samples == 0) {
         for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
-          volume_over_time.push_back(envelope.sustain_as_volume_percentage);
+          volume_over_time.push_back(envelope.sustain_as_raw);
         }
       }
       else {
@@ -2370,7 +2372,7 @@ std::vector<int32_t> oscillator_processing_callback(
       }
 
       for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
-          volume_over_time.push_back(envelope.sustain_as_volume_percentage);
+          volume_over_time.push_back(envelope.sustain_as_raw);
       }
   }
 
