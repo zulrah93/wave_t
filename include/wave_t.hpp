@@ -1063,7 +1063,7 @@ public:
 
     const double volume = helper::set_volume(volume_percent, max_sample_value);
     configuration.envelope.sustain_as_raw = helper::set_volume(configuration.envelope.sustain_as_volume_percentage, max_sample_value);
-
+     
     const bool is_stereo = m_header.number_of_channels == 2;
 
     const uint32_t sample_rate = m_header.sample_rate;
@@ -2349,7 +2349,7 @@ std::vector<int32_t> oscillator_processing_callback(
       attack_volume_step = (envelope.attack_in_samples == 0) 
                 ? peak_volume : (peak_volume / static_cast<double>(envelope.attack_in_samples));
       decay_volume_step = (envelope.decay_in_samples == 0) 
-                ? sustain_volume : (sustain_volume / static_cast<double>(envelope.decay_in_samples));
+                ? sustain_volume : ((sustain_volume) / static_cast<double>(envelope.decay_in_samples));
       
       if (envelope.attack_in_samples == 0) {
           volume_over_time.push_back(peak_volume);
@@ -2362,16 +2362,17 @@ std::vector<int32_t> oscillator_processing_callback(
 
       if (envelope.decay_in_samples == 0) {
         for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
-          volume_over_time.push_back(envelope.sustain_as_raw);
+          volume_over_time.push_back(sustain_volume);
         }
       }
       else {
-        for(uint32_t step = envelope.attack_in_samples; step > 0; step--) {
-            volume_over_time.push_back(static_cast<double>(step) * decay_volume_step);
+        for(uint32_t step = configuration.envelope.decay_in_samples; step > 0; step--) {
+            const double current_volume = sustain_volume + (static_cast<double>(step) * decay_volume_step);
+            volume_over_time.push_back(current_volume);
         }
       }
 
-      for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
+      while(volume_over_time.size() < sample_size) {
           volume_over_time.push_back(envelope.sustain_as_raw);
       }
   }
@@ -2438,8 +2439,10 @@ std::vector<int32_t> oscillator_processing_callback(
       if (modulation_amplitude <= 0.0) {
         modulation_amplitude = 1.0;
       }
-
-      offset /= real_time_volume;
+      
+      if (real_time_volume > 0.0) {
+        offset /= real_time_volume;
+      }
       offset *= modulation_amplitude;
 
       switch (selected_osc->operator_type) {
