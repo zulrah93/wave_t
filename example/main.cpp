@@ -193,9 +193,9 @@ int main(int arguments_size, char **arguments) {
   constexpr double detune_amount = 0.0;
 
   configuration.enable_envelope = true;
-  configuration.envelope.attack_in_samples = helper::milliseconds_to_samples(sample_rate, 100);
-  configuration.envelope.decay_in_samples = helper::milliseconds_to_samples(sample_rate, 100);
-  configuration.envelope.sustain_as_volume_percentage = 0.05;
+  configuration.envelope.attack_in_samples = helper::milliseconds_to_samples(sample_rate, 0);
+  configuration.envelope.decay_in_samples = helper::milliseconds_to_samples(sample_rate, 3000);
+  configuration.envelope.sustain_as_volume_percentage = 0.01;
   configuration.envelope.release_in_samples = 0;
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
@@ -507,6 +507,14 @@ int main(int arguments_size, char **arguments) {
     std::cout << "Midi Note ID " << midi_note_id 
                 << " has a Frequency of " << helper::midi_note_id_to_frequency(midi_note_id) << std::endl;
   }
+
+  std::cout << "Convolution demo" << std::endl;
+
+  const char *my_voice_path = "../samples/my_voice.wav";
+
+  wave_file_t voice{my_voice_path};
+  voice.apply_convolution("../samples/ShureSM57_0_dc.wav");
+  voice.save("my_voice_reverbed.wav");
 
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"

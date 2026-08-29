@@ -165,12 +165,12 @@ void inverse_discrete_fourier_transform_async(
         std::launch::async, [&sample_size, frequency, &frequency_domain]() {
           double real = 0.0f;
           for (size_t n = 0; n < sample_size; n++) {
-            const double x = std::norm(frequency_domain[n]);
+            const double x = frequency_domain[n].real();
             double ratio =
                 (static_cast<double>(n) / static_cast<double>(sample_size));
             double z =
                 2.0 * std::numbers::pi * static_cast<double>(frequency) * ratio;
-            real += x * cos(z);
+            real += x * (cos(z) * sin(z));
           }
           return (real / static_cast<double>(sample_size));
         });
@@ -187,12 +187,12 @@ void inverse_discrete_fourier_transform(
   for (size_t frequency = 0; frequency < sample_size; frequency++) {
     double real = 0.0f;
     for (size_t n = 0; n < sample_size; n++) {
-      const double x = std::norm(frequency_domain[n]);
+      const double x = frequency_domain[n].real();
       double ratio =
           (static_cast<double>(n) / static_cast<double>(sample_size));
       double z =
           2.0 * std::numbers::pi * static_cast<double>(frequency) * ratio;
-      real += x * cos(z);
+      real += x * (cos(z) + sin(z));
     }
     time_domain.push_back(real / static_cast<double>(sample_size));
   }
@@ -239,6 +239,22 @@ void discrete_fourier_transform_async(
   for (auto &future : futures) {
     frequency_domain.push_back(future.get());
   }
+}
+
+void discrete_convolution(
+        const std::vector<int64_t>& samples, 
+        const std::vector<int64_t>& input_response,
+      std::vector<int64_t>& output) {
+    
+   size_t sample_length = samples.size() + input_response.size() - 1;
+   for(size_t n = 0; n < sample_length; n++) {
+        size_t min = (n >= input_response.size() - 1) ? (n - (input_response.size() - 1)) : 0;
+        size_t max = (n < samples.size() - 1) ? n : (samples.size() - 1);
+
+        for (size_t k = min; k <= max; ++k) {
+            output[n] += samples[k] * input_response[n - k];
+        }
+   }
 }
 
 // Converts a PCM sample (8-bit, 16-bit, 24-bit, etc.) to its decibel full scale
@@ -1689,6 +1705,22 @@ public:
     return true;
   }
 
+
+  bool apply_convolution(const std::string& input_response_file_path) {
+      wave_file_t ir_audio{input_response_file_path};
+      if (!ir_audio) {
+          return false;
+      }
+      
+      auto& ir_samples = ir_audio.m_samples;
+      std::vector<int64_t> y(m_samples.size() + ir_samples.size() - 1, 0);
+      helper::discrete_convolution(m_samples, ir_samples, y);
+      m_samples.clear();
+      m_samples.append_range(y);
+
+      return true;
+  }
+
 #ifdef DEBUG
   std::string get_readable_wave_header(void) {
     std::stringstream header;
@@ -2361,8 +2393,8 @@ std::vector<int32_t> oscillator_processing_callback(
       }
 
       if (envelope.decay_in_samples == 0) {
-        for(size_t _ = 0; _ < (sample_size - volume_over_time.size()); _++) {
-          volume_over_time.push_back(sustain_volume);
+        while(volume_over_time.size() < sample_size) {
+          volume_over_time.push_back(peak_volume);
         }
       }
       else {
@@ -2403,8 +2435,11 @@ std::vector<int32_t> oscillator_processing_callback(
 
     bool ring_modulation{false};
 
-    if (use_envelope) {
+    if (use_envelope && current_frame < volume_over_time.size()) {
       real_time_volume = volume_over_time[current_frame];
+    }
+    else {
+      real_time_volume = volume;
     }
 
     for (auto &selected_osc : selected_oscs) {
