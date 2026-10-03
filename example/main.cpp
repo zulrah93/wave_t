@@ -129,8 +129,7 @@ int main(int arguments_size, char **arguments) {
   const size_t dft_sample_size =
       input.sample_size(); // NOTE: Larger values means slower time since this
                            // is a slow dft implementation
-  const bool async =
-      true; // DFT can be calculated asynchronously may help performance
+  const bool async{false}; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
@@ -171,7 +170,7 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
 
-  wave_file_t idft_wav_file(dft_sample_size, frequency_domain);
+  wave_file_t idft_wav_file(dft_sample_size, frequency_domain, async);
   output.set_sample_rate(sample_rate);
   output.set_number_of_channels(1);
   output.set_bits_per_sample(16);
@@ -280,8 +279,8 @@ int main(int arguments_size, char **arguments) {
 #elif defined (COMB_FILTER_DEMO)
   std::cout << "Generating a combfiltered sawtooth at C4 frequency..." << std::endl;
   configuration.apply_combfilter = true;
-  configuration.combfilter_distance = sample_rate;
-    configuration.oscillator_a.operator_type = carrier;
+  configuration.combfilter_distance = helper::milliseconds_to_samples(sample_rate, 16);
+  configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency =
       C4_FREQUENCY;

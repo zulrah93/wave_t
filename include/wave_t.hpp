@@ -184,17 +184,19 @@ void inverse_discrete_fourier_transform_async(
 void inverse_discrete_fourier_transform(
     size_t sample_size, std::vector<double> &time_domain,
     const std::vector<std::complex<double>> &frequency_domain) {
-  for (size_t frequency = 0; frequency < sample_size; frequency++) {
-    double real = 0.0f;
+      const double N = static_cast<double>(sample_size);
+
+  for (size_t k = 0; k < 44100; k++) {
+    std::complex result = 0.0 + 0.0i;
     for (size_t n = 0; n < sample_size; n++) {
-      const double x = frequency_domain[n].real();
-      double ratio =
-          (static_cast<double>(n) / static_cast<double>(sample_size));
-      double z =
-          2.0 * std::numbers::pi * static_cast<double>(frequency) * ratio;
-      real += x * (cos(z) + sin(z));
+      const std::complex X = frequency_domain[n];
+      double z{(2.0 * std::numbers::pi * static_cast<double>(k) * static_cast<double>(n)) / N};
+      result += X * std::complex(cos(z), sin(z));
     }
-    time_domain.push_back(real / static_cast<double>(sample_size));
+
+    result /= N;
+
+    time_domain.push_back(std::norm(result));
   }
 }
 
