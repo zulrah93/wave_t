@@ -279,13 +279,20 @@ int main(int arguments_size, char **arguments) {
 #elif defined (COMB_FILTER_DEMO)
   std::cout << "Generating a combfiltered sawtooth at C4 frequency..." << std::endl;
   configuration.apply_combfilter = true;
-  configuration.combfilter_distance = helper::milliseconds_to_samples(sample_rate, 16);
+  configuration.combfilter_distance = helper::milliseconds_to_samples(sample_rate, 15);
   configuration.oscillator_a.operator_type = carrier;
   configuration.oscillator_a.wave_type = wave_type_t::sawtooth;
   configuration.oscillator_a.frequency =
       C4_FREQUENCY;
   configuration.oscillator_a.osc_to_modulate =
       oscillator_selection_t::none_selected;
+
+     configuration.oscillator_b.operator_type = phase_modulation;
+  configuration.oscillator_b.wave_type = wave_type_t::sine;
+  configuration.oscillator_b.frequency =
+      C4_FREQUENCY;
+  configuration.oscillator_b.osc_to_modulate =
+      oscillator_selection_t::oscillator_a;
   
       constexpr const double seconds{3.55};
 
@@ -299,14 +306,14 @@ int main(int arguments_size, char **arguments) {
               << std::endl;
 
     if (!synth_output.save_waveform_as_monochrome_bmp(
-            "wave_table_synth.bmp", scale_down_image, shade_waveform,
-            print_text, pc_screenfont_file_path, "wave_table_synth.bmp")) {
+            "combfilter_synth.bmp", scale_down_image, shade_waveform,
+            print_text, pc_screenfont_file_path, "combfilter_synth.bmp")) {
       std::cout << "Failed to save generated monochrome bitmap of wav file!"
                 << std::endl;
     } else {
       std::cout << "Checkout the groovy waveform visually!" << std::endl;
     }
-    synth_output.save("synth_output.wav");
+    synth_output.save("combfilter_synth_output.wav");
   } else {
     std::cout
         << "Invalid synth configuration or failed to generate synth -- sorry."
