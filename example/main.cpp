@@ -129,7 +129,7 @@ int main(int arguments_size, char **arguments) {
   const size_t dft_sample_size =
       input.sample_size(); // NOTE: Larger values means slower time since this
                            // is a slow dft implementation
-  const bool async{false}; // DFT can be calculated asynchronously may help performance
+  const bool async{true}; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
