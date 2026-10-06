@@ -170,8 +170,7 @@ int main(int arguments_size, char **arguments) {
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
 
-  wave_file_t idft_wav_file(dft_sample_size, frequency_domain, async);
-  idft_wav_file.set_sample_rate(sample_rate);
+  wave_file_t idft_wav_file(dft_sample_size, sample_rate, frequency_domain, async);
   idft_wav_file.set_number_of_channels(1);
   idft_wav_file.set_bits_per_sample(16);
   idft_wav_file.save("idft_output.wav");

@@ -157,10 +157,10 @@ constexpr int32_t pcm_saw_tooth(double time, double amplititude,
 }
 
 void inverse_discrete_fourier_transform_async(
-    size_t sample_size, std::vector<double> &time_domain,
+    size_t sample_size, size_t sample_rate, std::vector<double> &time_domain,
     const std::vector<std::complex<double>> &frequency_domain) {
   std::vector<std::future<std::complex<double>>> futures;
-  for (size_t k = 0; k < 44100; k++) {
+  for (size_t k = 0; k < sample_rate; k++) {
     std::future<std::complex<double>> future = std::async(
         std::launch::async, [&sample_size, k, &frequency_domain]() {
           const double N = static_cast<double>(sample_size);
@@ -181,11 +181,11 @@ void inverse_discrete_fourier_transform_async(
 }
 
 void inverse_discrete_fourier_transform(
-    size_t sample_size, std::vector<double> &time_domain,
+    size_t sample_size, size_t sample_rate, std::vector<double> &time_domain,
     const std::vector<std::complex<double>> &frequency_domain) {
       const double N = static_cast<double>(sample_size);
 
-  for (size_t k = 0; k < 44100; k++) {
+  for (size_t k = 0; k < sample_rate; k++) {
     std::complex result = 0.0 + 0.0i;
     for (size_t n = 0; n < sample_size; n++) {
       const std::complex X = frequency_domain[n];
@@ -534,25 +534,31 @@ public:
   // Takes a frequency domain and constructs wave samples for playback --
   // supports async loading of samples or not
   explicit wave_file_t(
-      const size_t sample_size,
+      const size_t sample_size, const size_t sample_rate,
       const std::vector<std::complex<double>> &frequency_domain,
-      bool async = true)
-      : wave_file_t() {
+      bool async = true) : wave_file_t() {
+
+    set_sample_rate(sample_rate);
     std::vector<double> time_domain;
+
     if (sample_size > DEFAULT_RESERVE_VALUE) {
       m_samples.reserve(sample_size);
     }
+
     time_domain.reserve(sample_size);
+
     if (async) {
-      helper::inverse_discrete_fourier_transform_async(sample_size, time_domain,
+      helper::inverse_discrete_fourier_transform_async(sample_size, sample_rate, time_domain,
                                                        frequency_domain);
     } else {
-      helper::inverse_discrete_fourier_transform(sample_size, time_domain,
+      helper::inverse_discrete_fourier_transform(sample_size, sample_rate, time_domain,
                                                  frequency_domain);
     }
+
     for (auto &time_domain_sample : time_domain) {
       m_samples.push_back(time_domain_sample);
     }
+
   }
 
   wave_file_t(const std::string &wav_file_path) {
