@@ -159,25 +159,24 @@ constexpr int32_t pcm_saw_tooth(double time, double amplititude,
 void inverse_discrete_fourier_transform_async(
     size_t sample_size, std::vector<double> &time_domain,
     const std::vector<std::complex<double>> &frequency_domain) {
-  std::vector<std::future<double>> futures;
-  for (size_t frequency = 0; frequency < sample_size; frequency++) {
-    auto future = std::async(
-        std::launch::async, [&sample_size, frequency, &frequency_domain]() {
-          double real = 0.0f;
+  std::vector<std::future<std::complex<double>>> futures;
+  for (size_t k = 0; k < 44100; k++) {
+    std::future<std::complex<double>> future = std::async(
+        std::launch::async, [&sample_size, k, &frequency_domain]() {
+          const double N = static_cast<double>(sample_size);
+          std::complex result = 0.0 + 0.0i;
           for (size_t n = 0; n < sample_size; n++) {
-            const double x = frequency_domain[n].real();
-            double ratio =
-                (static_cast<double>(n) / static_cast<double>(sample_size));
-            double z =
-                2.0 * std::numbers::pi * static_cast<double>(frequency) * ratio;
-            real += x * (cos(z) * sin(z));
+            const std::complex X = frequency_domain[n];
+            double z{(2.0 * std::numbers::pi * static_cast<double>(k) * static_cast<double>(n)) / N};
+            result += X * std::complex(cos(z), sin(z));
           }
-          return (real / static_cast<double>(sample_size));
+          result /= N;
+          return result;
         });
     futures.push_back(std::move(future));
   }
   for (auto &future : futures) {
-    time_domain.push_back(future.get());
+    time_domain.push_back(future.get().real());
   }
 }
 
@@ -196,7 +195,7 @@ void inverse_discrete_fourier_transform(
 
     result /= N;
 
-    time_domain.push_back(std::norm(result));
+    time_domain.push_back(result.real());
   }
 }
 

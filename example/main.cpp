@@ -171,10 +171,10 @@ int main(int arguments_size, char **arguments) {
             << std::endl;
 
   wave_file_t idft_wav_file(dft_sample_size, frequency_domain, async);
-  output.set_sample_rate(sample_rate);
-  output.set_number_of_channels(1);
-  output.set_bits_per_sample(16);
-  output.save("idft_output.wav");
+  idft_wav_file.set_sample_rate(sample_rate);
+  idft_wav_file.set_number_of_channels(1);
+  idft_wav_file.set_bits_per_sample(16);
+  idft_wav_file.save("idft_output.wav");
 
   std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT
             << "osc ) at C4 (261.626 HZ)" << std::endl;
