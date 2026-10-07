@@ -28,6 +28,7 @@
 #include <iostream>
 #include <limits>
 #include <wave_t.hpp>
+#include <chrono>
 
 constexpr double C4_FREQUENCY{261.626};
 //constexpr double A4_FREQUENCY{440.000};
@@ -129,7 +130,7 @@ int main(int arguments_size, char **arguments) {
   const size_t dft_sample_size =
       input.sample_size(); // NOTE: Larger values means slower time since this
                            // is a slow dft implementation
-  const bool async{false}; // DFT can be calculated asynchronously may help performance
+  const bool async{true}; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
@@ -167,6 +168,9 @@ int main(int arguments_size, char **arguments) {
               << std::endl;
   }
 
+
+  const auto start_ticks = std::chrono::steady_clock::now();
+
   std::cout << "Testing IDFT by writing wav file from frequency domain..."
             << std::endl;
 
@@ -174,6 +178,9 @@ int main(int arguments_size, char **arguments) {
   idft_wav_file.set_number_of_channels(1);
   idft_wav_file.set_bits_per_sample(16);
   idft_wav_file.save("idft_output.wav");
+
+  const auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -  start_ticks);
+  std::cout << "IDFT took " << delta << std::endl;
 
   std::cout << "Generating a super saw (" << MAX_OSC_SUPPORT
             << "osc ) at C4 (261.626 HZ)" << std::endl;
