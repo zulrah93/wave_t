@@ -129,7 +129,7 @@ int main(int arguments_size, char **arguments) {
   const size_t dft_sample_size =
       input.sample_size(); // NOTE: Larger values means slower time since this
                            // is a slow dft implementation
-  const bool async{true}; // DFT can be calculated asynchronously may help performance
+  const bool async{false}; // DFT can be calculated asynchronously may help performance
   auto frequency_domain = input.get_frequency_domain(dft_sample_size, async);
 
   size_t detected_frequency_index = 0;
@@ -513,6 +513,7 @@ int main(int arguments_size, char **arguments) {
                 << " has a Frequency of " << helper::midi_note_id_to_frequency(midi_note_id) << std::endl;
   }
 
+#ifdef CONVOLUTION_DEMO
   std::cout << "Convolution demo" << std::endl;
 
   const char *my_voice_path = "../samples/my_voice.wav";
@@ -520,6 +521,7 @@ int main(int arguments_size, char **arguments) {
   wave_file_t voice{my_voice_path};
   voice.apply_convolution("../samples/ShureSM57_0_dc.wav");
   voice.save("my_voice_reverbed.wav");
+#endif
 
   std::cout
       << "Demo finished!! If you don't see this message assume process crashed!"
