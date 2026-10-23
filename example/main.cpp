@@ -268,6 +268,17 @@ int main(int arguments_size, char **arguments) {
     std::cout << synth_output.get_peak_decibel_fullscale_of_signal()
               << " dBFS is the peak of this generated super saw!!" << std::endl;
 
+    std::vector<std::complex<double>> super_saw_freq_domain = synth_output.get_frequency_domain(synth_output.sample_size(), async);
+    double percent{0.8};
+    for(auto& complex : super_saw_freq_domain) {
+        complex.imag(complex.imag() * percent);
+        percent -= 0.01;
+    }
+    wave_file_t phase(synth_output.sample_size(), sample_rate, super_saw_freq_domain, async);
+    phase.set_number_of_channels(1);
+    phase.set_bits_per_sample(32);
+    phase.save("phase_change_super_saw.wav");
+
     if (!synth_output.save_waveform_as_monochrome_bmp(
             "synth.bmp", scale_down_image, shade_waveform, print_text,
             pc_screenfont_file_path, "synth.bmp")) {
@@ -526,7 +537,7 @@ int main(int arguments_size, char **arguments) {
   const char *my_voice_path = "../samples/my_voice.wav";
 
   wave_file_t voice{my_voice_path};
-  voice.apply_convolution("../samples/ShureSM57_0_dc.wav");
+  voice.apply_convolution("../samples/Small Drum Room.wav");
   voice.save("my_voice_reverbed.wav");
 #endif
 

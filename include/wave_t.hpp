@@ -242,22 +242,6 @@ void discrete_fourier_transform_async(
   }
 }
 
-void discrete_convolution(
-        const std::vector<int64_t>& samples, 
-        const std::vector<int64_t>& input_response,
-      std::vector<int64_t>& output) {
-    
-   size_t sample_length = samples.size() + input_response.size() - 1;
-   for(size_t n = 0; n < sample_length; n++) {
-        size_t min = (n >= input_response.size() - 1) ? (n - (input_response.size() - 1)) : 0;
-        size_t max = (n < samples.size() - 1) ? n : (samples.size() - 1);
-
-        for (size_t k = min; k <= max; ++k) {
-            output[n] += samples[k] * input_response[n - k];
-        }
-   }
-}
-
 // Converts a PCM sample (8-bit, 16-bit, 24-bit, etc.) to its decibel full scale
 // value where 0 dB is like the max and beyond that is essenitally clipping
 // Refer to: https://en.wikipedia.org/wiki/DBFS
@@ -1714,18 +1698,34 @@ public:
 
 
   bool apply_convolution(const std::string& input_response_file_path) {
-      wave_file_t ir_audio{input_response_file_path};
-      if (!ir_audio) {
+    wave_file_t ir_audio{input_response_file_path};
+    if (!ir_audio) {
           return false;
-      }
+    }
       
-      auto& ir_samples = ir_audio.m_samples;
-      std::vector<int64_t> y(m_samples.size() + ir_samples.size() - 1, 0);
-      helper::discrete_convolution(m_samples, ir_samples, y);
-      m_samples.clear();
-      m_samples.append_range(y);
+    auto ir_frequency_domain = ir_audio.get_frequency_domain(ir_audio.sample_size(), true);
+    auto frequency_domain = get_frequency_domain(sample_size(), true);
 
-      return true;
+    std::vector<std::complex<double>> convolution_frequency_domain;
+    convolution_frequency_domain.reserve(frequency_domain.size());
+
+    if (frequency_domain.size() > ir_frequency_domain.size()) {
+      for (size_t _{}; _ < (frequency_domain.size() - ir_frequency_domain.size()); _++) {
+         ir_frequency_domain.push_back(0.0 + 0.0i);
+      }
+
+      for (size_t m{}; m < frequency_domain.size(); m++) {
+        convolution_frequency_domain.push_back(frequency_domain[m] * ir_frequency_domain[m]);
+      }
+      m_samples.clear();
+      std::vector<double> time_domain_samples;
+      helper::inverse_discrete_fourier_transform_async(convolution_frequency_domain.size(), m_header.sample_rate, time_domain_samples, convolution_frequency_domain);
+      for (auto& sample : time_domain_samples) {
+          m_samples.push_back(static_cast<int64_t>(sample));
+      }
+    }
+
+    return true;
   }
 
 #ifdef DEBUG
