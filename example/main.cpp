@@ -30,6 +30,8 @@
 #include <wave_t.hpp>
 #include <chrono>
 
+#include "../include/wave_t.hpp"
+
 constexpr double C4_FREQUENCY{261.626};
 //constexpr double A4_FREQUENCY{440.000};
 constexpr double D5_FREQUENCY{622.25};
@@ -269,11 +271,12 @@ int main(int arguments_size, char **arguments) {
               << " dBFS is the peak of this generated super saw!!" << std::endl;
 
     std::vector<std::complex<double>> super_saw_freq_domain = synth_output.get_frequency_domain(synth_output.sample_size(), async);
-    double percent{0.8};
-    for(auto& complex : super_saw_freq_domain) {
-        complex.imag(complex.imag() * percent);
-        percent -= 0.01;
+      
+    for(size_t index{0}; index < super_saw_freq_domain.size(); index++) {
+        auto& complex = super_saw_freq_domain[index];
+        complex.imag(complex.imag() * static_cast<double>(80.0) * std::sin(static_cast<double>(index)));
     }
+
     wave_file_t phase(synth_output.sample_size(), sample_rate, super_saw_freq_domain, async);
     phase.set_number_of_channels(1);
     phase.set_bits_per_sample(32);
